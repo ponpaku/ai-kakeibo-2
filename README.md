@@ -208,6 +208,7 @@ python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate.bat
 pip install --upgrade pip  # pipを最新版に更新
 pip install -r requirements.txt
+pip install yomitoku  # OCRライブラリは別途インストール
 python init_db.py  # データベース初期化（ユーザーとカテゴリを自動作成）
 cd ..
 ```
@@ -217,6 +218,8 @@ cd ..
 - ✅ セキュリティアップデートが適用されます
 - ✅ 将来的なメンテナンスが容易になります
 
+> **📝 注意**: YomiToku（OCRライブラリ）はrequirements.txtではなく、個別に`pip install yomitoku`でインストールしてください。
+
 **Windows版:**
 
 ```bat
@@ -225,6 +228,7 @@ python -m venv venv
 venv\Scripts\activate.bat
 pip install --upgrade pip
 pip install -r requirements.txt
+pip install yomitoku
 python init_db.py
 cd ..
 ```
@@ -304,6 +308,7 @@ cd backend
 source venv/bin/activate  # Windows: venv\Scripts\activate.bat
 pip install --upgrade pip
 pip install --upgrade -r requirements.txt
+pip install --upgrade yomitoku  # OCRライブラリも更新
 cd ..
 ```
 
@@ -343,6 +348,7 @@ python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate.bat
 pip install --upgrade pip
 pip install -r requirements.txt
+pip install yomitoku  # OCRライブラリを個別にインストール
 python init_db.py
 cd ..
 ```

@@ -1,8 +1,31 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
+from pathlib import Path
+from dotenv import load_dotenv, find_dotenv
+
+# .envファイルを探して読み込む
+# find_dotenv()は親ディレクトリを遡って.envファイルを探す
+# usecwd=Trueで、カレントディレクトリから探し始める
+dotenv_path = find_dotenv(usecwd=True)
+if not dotenv_path:
+    # カレントディレクトリから見つからない場合、このファイルの位置から探す
+    # backend/app/config.py から見て ../../.env (プロジェクトルート)
+    current_dir = Path(__file__).resolve().parent
+    project_root_env = current_dir.parent.parent / ".env"
+    if project_root_env.exists():
+        dotenv_path = str(project_root_env)
+
+# .envファイルを環境変数として読み込む
+if dotenv_path:
+    load_dotenv(dotenv_path, override=False)
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        case_sensitive=True,
+        env_file_encoding='utf-8'
+    )
+
     # Database
     DB_HOST: str = "localhost"
     DB_PORT: int = 3306
@@ -48,10 +71,6 @@ class Settings(BaseSettings):
     @property
     def CORS_ORIGINS_LIST(self) -> List[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
 
 
 settings = Settings()
