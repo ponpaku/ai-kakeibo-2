@@ -10,6 +10,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0', // 外部からのアクセスを許可
     port: 5173,
     proxy: {
       '/api': {
