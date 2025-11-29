@@ -50,28 +50,44 @@ ADHD夫婦でも継続できる家計簿を目指して開発されたアプリ�
 cd AI-kakeibo-claude
 ```
 
-### 2. 環境変数の設定
+### 2. 環境変数の設定（重要）
+
+⚠️ **この手順は必須です。スキップするとエラーが発生します。**
 
 ```bash
 cp .env.example .env
 ```
 
-`.env`ファイルを編集して、以下の項目を設定してください：
+`.env`ファイルを編集して、以下の**必須項目**を設定してください：
 
+```env
+# ⚠️ 必須: MariaDBのユーザー名とパスワード
+DB_USER=your_db_user          # ← MariaDBのユーザー名に変更
+DB_PASSWORD=your_db_password  # ← MariaDBのパスワードに変更
+
+# ⚠️ 必須: セキュリティ用のランダムな文字列
+SECRET_KEY=your-secret-key-here  # ← ランダムな文字列に変更
+```
+
+SECRET_KEYの生成方法：
+```bash
+# 方法1: Pythonで生成
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# 方法2: opensslで生成
+openssl rand -hex 32
+```
+
+その他の設定項目：
 ```env
 # Database Configuration
 DB_HOST=localhost
 DB_PORT=3306
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
 DB_NAME=ai_kakeibo
 
 # Redis Configuration
 REDIS_HOST=localhost
 REDIS_PORT=6379
-
-# Security
-SECRET_KEY=ランダムな文字列を生成してください
 
 # AI Configuration
 CLAUDE_CLI_PATH=claude
@@ -184,7 +200,21 @@ brew services restart redis   # Mac
 
 ### 5. 依存関係のインストールとDB初期化
 
-**簡単な方法（推奨）:**
+**方法1: ワンライナーでインストール（推奨）**
+
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate.bat
+
+# すべての依存関係を一度にインストール
+pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1 yomitoku==0.3.0
+
+python init_db.py  # データベース初期化（ユーザーとカテゴリを自動作成）
+cd ..
+```
+
+**方法2: requirements.txtを使用**
 
 ```bash
 cd backend
@@ -194,6 +224,8 @@ pip install -r requirements.txt
 python init_db.py  # データベース初期化（ユーザーとカテゴリを自動作成）
 cd ..
 ```
+
+> **💡 ヒント**: より詳しいワンライナー（Windows版、完全セットアップ版など）は[INSTALL_ONELINER.md](INSTALL_ONELINER.md)を参照してください。
 
 `init_db.py`は以下を自動的に実行します：
 - データベーステーブルの作成
@@ -336,6 +368,41 @@ run.bat
 - カテゴリの追加・編集・削除
 
 ## トラブルシューティング
+
+### .envファイル関連のエラー
+
+**症状**: `Field required` や `ValidationError` などのエラー
+
+**原因**: `.env`ファイルが存在しないか、必須フィールドが設定されていません。
+
+**解決方法**:
+
+1. `.env`ファイルが存在するか確認：
+```bash
+ls -la .env
+```
+
+2. 存在しない場合は作成：
+```bash
+cp .env.example .env
+```
+
+3. 必須フィールドを設定：
+```bash
+nano .env  # または vim、code など好みのエディタで開く
+```
+
+必須項目：
+- `DB_USER` - MariaDBのユーザー名
+- `DB_PASSWORD` - MariaDBのパスワード
+- `SECRET_KEY` - ランダムな文字列（生成方法は上記参照）
+
+4. 設定後、再度実行：
+```bash
+cd backend
+source venv/bin/activate
+python init_db.py
+```
 
 ### OCRが動作しない
 

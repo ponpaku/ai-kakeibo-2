@@ -196,31 +196,57 @@ brew services restart redis
 cd AI-kakeibo-claude
 ```
 
-### 2. 環境変数ファイルの作成
+### 2. 環境変数ファイルの作成（重要）
+
+⚠️ **この手順は必須です。後続のステップで`.env`ファイルが必要になります。**
 
 ```bash
 cp .env.example .env
 ```
 
-### 3. 環境変数の編集
+### 3. 環境変数の編集（重要）
 
-`.env`ファイルを開いて、以下の項目を編集します：
+`.env`ファイルを開いて、以下の**必須項目**を編集します：
+
+#### 必須設定項目
+
+これらを設定しないと、アプリケーションが起動しません：
+
+```env
+# ⚠️ 必須: MariaDBのユーザー名とパスワード
+DB_USER=your_db_user          # ← 実際のMariaDBユーザー名に変更
+DB_PASSWORD=your_db_password  # ← 実際のMariaDBパスワードに変更
+
+# ⚠️ 必須: セキュリティ用のランダムな文字列
+SECRET_KEY=your-secret-key-here  # ← ランダムな文字列に変更（下記参照）
+```
+
+**SECRET_KEYの生成方法：**
+
+```bash
+# 方法1: Pythonで生成（推奨）
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# 方法2: OpenSSLで生成
+openssl rand -hex 32
+
+# 方法3: 手動で32文字以上のランダムな文字列を入力
+```
+
+#### その他の設定項目（デフォルトで動作します）
+
+必要に応じて変更してください：
 
 ```env
 # Database Configuration
 DB_HOST=localhost
 DB_PORT=3306
-DB_USER=your_db_user          # MariaDBのユーザー名
-DB_PASSWORD=your_db_password  # MariaDBのパスワード
 DB_NAME=ai_kakeibo
 
 # Redis Configuration
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_DB=0
-
-# Security
-SECRET_KEY=your-secret-key-here-change-this-in-production  # ランダムな文字列に変更
 
 # File Upload
 UPLOAD_DIR=./uploads/receipts
@@ -240,11 +266,6 @@ FRONTEND_PORT=5173
 CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
-重要な設定項目：
-- `DB_USER`: MariaDBのユーザー名
-- `DB_PASSWORD`: MariaDBのパスワード
-- `SECRET_KEY`: セキュリティのためのランダムな文字列（必ず変更してください）
-
 ### 4. データベースの作成
 
 MariaDBにログインしてデータベースを作成：
@@ -263,6 +284,21 @@ EXIT;
 
 ### 5. Pythonの依存関係インストール
 
+**方法1: ワンライナーでインストール（推奨）**
+
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate.bat
+
+# すべての依存関係を一度にインストール
+pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1 yomitoku==0.3.0
+
+cd ..
+```
+
+**方法2: requirements.txtを使用**
+
 ```bash
 cd backend
 python3 -m venv venv
@@ -270,6 +306,10 @@ source venv/bin/activate  # Windows: venv\Scripts\activate.bat
 pip install -r requirements.txt
 cd ..
 ```
+
+どちらの方法でも同じ依存関係がインストールされます。
+
+> **💡 ヒント**: より詳しいワンライナー（Windows版、完全セットアップ版など）は[INSTALL_ONELINER.md](INSTALL_ONELINER.md)を参照してください。
 
 ### 6. Node.jsの依存関係インストール
 
@@ -376,6 +416,62 @@ run.bat
 5. レシート撮影（OCRとAI分類）をテストする
 
 ## トラブルシューティング
+
+### .envファイル関連のエラー
+
+**症状**: `python init_db.py`実行時に以下のようなエラーが出る
+```
+ValidationError: 3 validation errors for Settings
+DB_USER
+  Field required [type=missing, ...]
+DB_PASSWORD
+  Field required [type=missing, ...]
+SECRET_KEY
+  Field required [type=missing, ...]
+```
+
+**原因**: `.env`ファイルが存在しないか、必須フィールドが設定されていません。
+
+**解決方法**:
+
+修正された`init_db.py`を使用している場合、わかりやすいエラーメッセージが表示されます。指示に従ってください。
+
+手動で確認する場合：
+
+1. プロジェクトルートに`.env`ファイルが存在するか確認：
+```bash
+cd /path/to/AI-kakeibo-claude
+ls -la .env
+```
+
+2. 存在しない場合は作成：
+```bash
+cp .env.example .env
+```
+
+3. `.env`ファイルを編集して必須項目を設定：
+```bash
+nano .env  # または vim、code、notepad など
+```
+
+必須項目（必ず設定してください）：
+```env
+DB_USER=your_actual_db_user        # 実際のMariaDBユーザー名
+DB_PASSWORD=your_actual_password   # 実際のMariaDBパスワード
+SECRET_KEY=random_string_here      # ランダムな文字列
+```
+
+4. SECRET_KEYの生成：
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+5. 保存して再実行：
+```bash
+cd backend
+source venv/bin/activate
+python init_db.py
+```
 
 ### ポートが既に使用されている
 
