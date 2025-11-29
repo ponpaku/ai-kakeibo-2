@@ -200,32 +200,34 @@ brew services restart redis   # Mac
 
 ### 5. 依存関係のインストールとDB初期化
 
-**方法1: ワンライナーでインストール（推奨）**
+**推奨方法: requirements.txtを使用（最新版対応）**
 
 ```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate.bat
-
-# すべての依存関係を一度にインストール
-pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1 yomitoku==0.3.0
-
-python init_db.py  # データベース初期化（ユーザーとカテゴリを自動作成）
-cd ..
-```
-
-**方法2: requirements.txtを使用**
-
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate.bat
+pip install --upgrade pip  # pipを最新版に更新
 pip install -r requirements.txt
 python init_db.py  # データベース初期化（ユーザーとカテゴリを自動作成）
 cd ..
 ```
 
-> **💡 ヒント**: より詳しいワンライナー（Windows版、完全セットアップ版など）は[INSTALL_ONELINER.md](INSTALL_ONELINER.md)を参照してください。
+この方法を使用することで：
+- ✅ 最新の安定版パッケージがインストールされます
+- ✅ セキュリティアップデートが適用されます
+- ✅ 将来的なメンテナンスが容易になります
+
+**Windows版:**
+
+```bat
+cd backend
+python -m venv venv
+venv\Scripts\activate.bat
+pip install --upgrade pip
+pip install -r requirements.txt
+python init_db.py
+cd ..
+```
 
 `init_db.py`は以下を自動的に実行します：
 - データベーステーブルの作成
@@ -290,6 +292,66 @@ print("初期データを作成しました")
 ```
 
 </details>
+
+## 依存関係の更新
+
+このプロジェクトでは、最新の安定版パッケージを使用するように設計されています。定期的に依存関係を更新することで、セキュリティパッチや新機能を利用できます。
+
+### パッケージの更新方法
+
+```bash
+cd backend
+source venv/bin/activate  # Windows: venv\Scripts\activate.bat
+pip install --upgrade pip
+pip install --upgrade -r requirements.txt
+cd ..
+```
+
+### 更新後の確認
+
+依存関係を更新した後は、以下を確認してください：
+
+1. **データベーステーブルの互換性確認**
+   ```bash
+   cd backend
+   source venv/bin/activate
+   python init_db.py  # エラーが出ないか確認
+   ```
+
+2. **アプリケーションの起動確認**
+   ```bash
+   ./run.sh  # または run.bat
+   ```
+
+3. **主要機能のテスト**
+   - ログイン機能
+   - 手入力機能
+   - レシート撮影とOCR処理
+   - AI分類機能
+
+### トラブルシューティング
+
+更新後に問題が発生した場合：
+
+**症状**: アプリケーションが起動しない、エラーが発生する
+
+**解決方法**: 仮想環境を再作成してクリーンインストール
+```bash
+cd backend
+rm -rf venv  # Windows: rmdir /s venv
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate.bat
+pip install --upgrade pip
+pip install -r requirements.txt
+python init_db.py
+cd ..
+```
+
+### 更新の推奨頻度
+
+- **セキュリティアップデート**: 重要なセキュリティ修正がある場合は即座に更新
+- **定期更新**: 月1回程度の定期的な更新を推奨
+- **メジャーバージョンアップ**: requirements.txtの上限バージョンを超える場合は慎重に検討
 
 ## 起動方法
 

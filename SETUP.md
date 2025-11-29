@@ -284,32 +284,34 @@ EXIT;
 
 ### 5. Pythonの依存関係インストール
 
-**方法1: ワンライナーでインストール（推奨）**
+**推奨方法: requirements.txtを使用（最新版対応）**
 
 ```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate.bat
-
-# すべての依存関係を一度にインストール
-pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1 yomitoku==0.3.0
-
-cd ..
-```
-
-**方法2: requirements.txtを使用**
-
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate.bat
+pip install --upgrade pip  # pipを最新版に更新
 pip install -r requirements.txt
 cd ..
 ```
 
-どちらの方法でも同じ依存関係がインストールされます。
+この方法を使用することで：
+- ✅ 最新の安定版パッケージがインストールされます
+- ✅ セキュリティアップデートが適用されます
+- ✅ 将来的なメンテナンスが容易になります
 
-> **💡 ヒント**: より詳しいワンライナー（Windows版、完全セットアップ版など）は[INSTALL_ONELINER.md](INSTALL_ONELINER.md)を参照してください。
+**Windows版:**
+
+```bat
+cd backend
+python -m venv venv
+venv\Scripts\activate.bat
+pip install --upgrade pip
+pip install -r requirements.txt
+cd ..
+```
+
+> **💡 注意**: 古いバージョンのワンライナーインストール方法は[INSTALL_ONELINER.md](INSTALL_ONELINER.md)に記載されていますが、継続的な運用には推奨されません。最新版対応のためrequirements.txtを使用してください。
 
 ### 6. Node.jsの依存関係インストール
 
