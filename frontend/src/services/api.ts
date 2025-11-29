@@ -13,15 +13,38 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    // 開発モードでのデバッグログ
+    if (import.meta.env.DEV) {
+      console.log('🔑 API Request:', config.method?.toUpperCase(), config.url, '- Token:', token.substring(0, 20) + '...');
+    }
+  } else {
+    // トークンがない場合も開発モードでログ出力
+    if (import.meta.env.DEV) {
+      console.warn('⚠️ API Request without token:', config.method?.toUpperCase(), config.url);
+    }
   }
   return config;
 });
 
 // 認証エラーの処理
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // 開発モードでのデバッグログ（成功時）
+    if (import.meta.env.DEV) {
+      console.log('✅ API Response:', response.config.method?.toUpperCase(), response.config.url, '- Status:', response.status);
+    }
+    return response;
+  },
   (error) => {
+    // 開発モードでのデバッグログ（エラー時）
+    if (import.meta.env.DEV) {
+      console.error('❌ API Error:', error.config?.method?.toUpperCase(), error.config?.url, '- Status:', error.response?.status, '- Detail:', error.response?.data);
+    }
+
     if (error.response?.status === 401) {
+      if (import.meta.env.DEV) {
+        console.warn('🚪 401 Unauthorized - Redirecting to login');
+      }
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
       window.location.href = '/login';

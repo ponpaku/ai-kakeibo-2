@@ -18,7 +18,8 @@ export default function LoginPage() {
       const response = await authAPI.login(username, password);
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('user', JSON.stringify(response.user));
-      navigate('/');
+      // ページ全体をリロードして、localStorageとaxiosインターセプターを確実に初期化
+      window.location.href = '/';
     } catch (err: any) {
       setError(err.response?.data?.detail || 'ログインに失敗しました');
     } finally {
