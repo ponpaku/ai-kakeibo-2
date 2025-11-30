@@ -14,6 +14,8 @@ def get_current_user(
     token: str = Depends(oauth2_scheme)
 ) -> User:
     """現在のユーザーを取得"""
+    print(f"🔑 Authenticating with token (first 30 chars): {token[:30]}...")
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="認証に失敗しました",
@@ -22,22 +24,31 @@ def get_current_user(
 
     payload = decode_access_token(token)
     if payload is None:
+        print(f"❌ Token decode failed - invalid or expired token")
         raise credentials_exception
+
+    print(f"✅ Token decoded successfully: {payload}")
 
     user_id: int = payload.get("sub")
     if user_id is None:
+        print(f"❌ 'sub' field missing from token payload")
         raise credentials_exception
+
+    print(f"👤 Looking up user with ID: {user_id}")
 
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
+        print(f"❌ User not found with ID: {user_id}")
         raise credentials_exception
 
     if not user.is_active:
+        print(f"❌ User {user.username} is inactive")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="ユーザーが無効化されています"
         )
 
+    print(f"✅ User authenticated: {user.username} (ID: {user.id})")
     return user
 
 

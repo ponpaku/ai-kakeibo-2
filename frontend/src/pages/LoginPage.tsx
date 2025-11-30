@@ -15,12 +15,40 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      console.log('🔐 Attempting login with username:', username);
       const response = await authAPI.login(username, password);
+      console.log('📥 Login response received:', response);
+      console.log('🎫 Access token:', response.access_token ? response.access_token.substring(0, 30) + '...' : 'MISSING!');
+      console.log('👤 User data:', response.user);
+
+      if (!response.access_token) {
+        console.error('❌ ERROR: access_token is missing from response!');
+        setError('ログインレスポンスにトークンがありません');
+        return;
+      }
+
+      console.log('💾 Saving to localStorage...');
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('user', JSON.stringify(response.user));
+
+      // 保存を確認
+      const savedToken = localStorage.getItem('access_token');
+      const savedUser = localStorage.getItem('user');
+      console.log('✅ Saved token:', savedToken ? savedToken.substring(0, 30) + '...' : 'NOT SAVED!');
+      console.log('✅ Saved user:', savedUser);
+
+      if (!savedToken) {
+        console.error('❌ ERROR: Failed to save token to localStorage!');
+        setError('トークンの保存に失敗しました');
+        return;
+      }
+
+      console.log('🚀 Redirecting to dashboard...');
       // ページ全体をリロードして、localStorageとaxiosインターセプターを確実に初期化
       window.location.href = '/';
     } catch (err: any) {
+      console.error('❌ Login error:', err);
+      console.error('❌ Error response:', err.response);
       setError(err.response?.data?.detail || 'ログインに失敗しました');
     } finally {
       setLoading(false);
