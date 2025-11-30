@@ -60,31 +60,57 @@ export default function InputPage() {
 
     setUploading(true);
 
-    if (autoProcess) {
-      setProcessingStatus({ show: true, stage: 'uploading', canLeave: false });
-    }
-
     try {
-      await receiptAPI.uploadReceipt(selectedFile, autoProcess);
+      const result = await receiptAPI.uploadReceipt(selectedFile, autoProcess);
 
       if (autoProcess) {
-        // OCR処理段階に移行
-        setProcessingStatus({ show: true, stage: 'ocr', canLeave: true });
-
-        // 疑似的な進捗表示（実際のプロジェクトではWebSocketやポーリングで実装）
-        setTimeout(() => {
-          setProcessingStatus({ show: true, stage: 'ai', canLeave: true });
-        }, 3000);
-
-        setTimeout(() => {
-          setProcessingStatus({ show: true, stage: 'complete', canLeave: true });
-          setTimeout(() => {
-            navigate('/');
-          }, 1500);
-        }, 6000);
-      } else {
-        alert('レシートをアップロードしました');
+        // 「あとは任せる」の場合：処理を受け付けたことを表示してダッシュボードに戻る
+        alert('レシートを受け付けました。OCRとAI分類を自動で実行します。');
         navigate('/');
+      } else {
+        // 「OCR実行」の場合：OCR処理を開始し、結果を待つ
+        const expenseId = result.expense_id;
+
+        // OCR処理を開始
+        await receiptAPI.processReceipt(expenseId, true); // skip_ai = true
+
+        // OCR結果を待つ（ポーリング）
+        setProcessingStatus({ show: true, stage: 'ocr', canLeave: false });
+
+        let attempts = 0;
+        const maxAttempts = 30; // 30秒待つ
+        const pollInterval = setInterval(async () => {
+          attempts++;
+
+          try {
+            const expense = await expenseAPI.getExpense(expenseId);
+
+            if (expense.status === 'processed' || expense.status === 'completed' || expense.ocr_raw_text) {
+              // OCR完了
+              clearInterval(pollInterval);
+              setProcessingStatus({ show: false, stage: 'uploading', canLeave: false });
+
+              // 編集画面に遷移
+              navigate(`/expenses/${expenseId}/edit`);
+            } else if (expense.status === 'failed') {
+              // OCR失敗
+              clearInterval(pollInterval);
+              setProcessingStatus({ show: false, stage: 'uploading', canLeave: false });
+              alert('OCR処理に失敗しました');
+            } else if (attempts >= maxAttempts) {
+              // タイムアウト
+              clearInterval(pollInterval);
+              setProcessingStatus({ show: false, stage: 'uploading', canLeave: false });
+              alert('OCR処理がタイムアウトしました。ダッシュボードで確認してください。');
+              navigate('/');
+            }
+          } catch (error) {
+            console.error('OCR結果の取得に失敗しました:', error);
+            clearInterval(pollInterval);
+            setProcessingStatus({ show: false, stage: 'uploading', canLeave: false });
+            alert('OCR結果の取得に失敗しました');
+          }
+        }, 1000);
       }
     } catch (error) {
       console.error('アップロードに失敗しました:', error);
@@ -218,83 +244,16 @@ export default function InputPage() {
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-lg p-8 max-w-md w-full">
                 <h2 className="text-xl font-bold text-gray-900 mb-6 text-center">
-                  レシート処理中
+                  OCR処理中
                 </h2>
 
-                <div className="space-y-4">
-                  {/* 進捗表示 */}
-                  <div className={`flex items-center gap-3 p-3 rounded-lg ${
-                    processingStatus.stage === 'uploading' ? 'bg-blue-50' : 'bg-gray-50'
-                  }`}>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                      processingStatus.stage === 'uploading' ? 'bg-blue-500' :
-                      processingStatus.stage !== 'uploading' ? 'bg-green-500' : 'bg-gray-300'
-                    }`}>
-                      {processingStatus.stage !== 'uploading' && (
-                        <span className="text-white text-sm">✓</span>
-                      )}
-                    </div>
-                    <span className="text-gray-700">アップロード中...</span>
-                  </div>
-
-                  <div className={`flex items-center gap-3 p-3 rounded-lg ${
-                    processingStatus.stage === 'ocr' ? 'bg-blue-50' : 'bg-gray-50'
-                  }`}>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                      processingStatus.stage === 'ocr' ? 'bg-blue-500 animate-pulse' :
-                      ['ai', 'complete'].includes(processingStatus.stage) ? 'bg-green-500' : 'bg-gray-300'
-                    }`}>
-                      {['ai', 'complete'].includes(processingStatus.stage) && (
-                        <span className="text-white text-sm">✓</span>
-                      )}
-                    </div>
-                    <span className="text-gray-700">OCR処理中...</span>
-                  </div>
-
-                  <div className={`flex items-center gap-3 p-3 rounded-lg ${
-                    processingStatus.stage === 'ai' ? 'bg-blue-50' : 'bg-gray-50'
-                  }`}>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                      processingStatus.stage === 'ai' ? 'bg-blue-500 animate-pulse' :
-                      processingStatus.stage === 'complete' ? 'bg-green-500' : 'bg-gray-300'
-                    }`}>
-                      {processingStatus.stage === 'complete' && (
-                        <span className="text-white text-sm">✓</span>
-                      )}
-                    </div>
-                    <span className="text-gray-700">AI分類中...</span>
-                  </div>
-
-                  <div className={`flex items-center gap-3 p-3 rounded-lg ${
-                    processingStatus.stage === 'complete' ? 'bg-green-50' : 'bg-gray-50'
-                  }`}>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                      processingStatus.stage === 'complete' ? 'bg-green-500' : 'bg-gray-300'
-                    }`}>
-                      {processingStatus.stage === 'complete' && (
-                        <span className="text-white text-sm">✓</span>
-                      )}
-                    </div>
-                    <span className="text-gray-700">完了</span>
-                  </div>
+                <div className="flex items-center justify-center">
+                  <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
 
-                {processingStatus.canLeave && (
-                  <div className="mt-6">
-                    <button
-                      onClick={() => {
-                        setProcessingStatus({ show: false, stage: 'uploading', canLeave: false });
-                        navigate('/');
-                      }}
-                      className="w-full px-4 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                    >
-                      あとは任せる
-                    </button>
-                    <p className="text-xs text-gray-500 mt-2 text-center">
-                      処理は続行されます。ダッシュボードに戻ります。
-                    </p>
-                  </div>
-                )}
+                <p className="text-gray-600 text-center mt-6">
+                  レシートを解析しています...
+                </p>
               </div>
             </div>
           )}

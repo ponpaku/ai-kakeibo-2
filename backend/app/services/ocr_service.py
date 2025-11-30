@@ -2,6 +2,8 @@ from typing import Dict, List, Optional
 from decimal import Decimal
 from datetime import datetime
 import json
+import cv2
+import numpy as np
 
 
 class OCRService:
@@ -13,15 +15,25 @@ class OCRService:
         try:
             from yomitoku import DocumentAnalyzer
 
+            # CPUで処理するように設定
             analyzer = DocumentAnalyzer(
                 configs={
                     "enable_all": True,
                 },
-                visualize=False
+                visualize=False,
+                device="cpu"  # CPUを使用
             )
 
-            # OCR実行
-            result = analyzer(image_path)
+            # 画像を読み込む（OpenCVでnumpy配列として）
+            image = cv2.imread(image_path)
+            if image is None:
+                raise ValueError(f"画像を読み込めませんでした: {image_path}")
+
+            # BGRからRGBに変換（yomitokuはRGB形式を期待）
+            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+            # OCR実行（numpy配列を渡す）
+            result = analyzer(image_rgb)
 
             # 結果を解析
             parsed_data = OCRService._parse_ocr_result(result)

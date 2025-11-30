@@ -3,6 +3,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import InputPage from './pages/InputPage';
 import AdminPage from './pages/AdminPage';
+import ExpenseEditPage from './pages/ExpenseEditPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('access_token');
@@ -38,6 +39,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/expenses/:id/edit"
+          element={
+            <ProtectedRoute>
+              <ExpenseEditPage />
             </ProtectedRoute>
           }
         />
