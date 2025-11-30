@@ -29,9 +29,16 @@ def get_current_user(
 
     print(f"✅ Token decoded successfully: {payload}")
 
-    user_id: int = payload.get("sub")
-    if user_id is None:
+    user_id_str = payload.get("sub")
+    if user_id_str is None:
         print(f"❌ 'sub' field missing from token payload")
+        raise credentials_exception
+
+    # JWT仕様でsubは文字列なので、整数に変換
+    try:
+        user_id: int = int(user_id_str)
+    except (ValueError, TypeError):
+        print(f"❌ Invalid user ID format: {user_id_str}")
         raise credentials_exception
 
     print(f"👤 Looking up user with ID: {user_id}")
