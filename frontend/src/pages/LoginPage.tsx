@@ -14,43 +14,71 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
+    // デバッグ用：フォーム送信を確認
+    const timestamp = new Date().toISOString();
+    console.clear(); // コンソールをクリア
+    console.log('='.repeat(60));
+    console.log(`🔐 [${timestamp}] LOGIN ATTEMPT STARTED`);
+    console.log(`   Username: ${username}`);
+    console.log('='.repeat(60));
+
     try {
-      console.log('🔐 Attempting login with username:', username);
       const response = await authAPI.login(username, password);
-      console.log('📥 Login response received:', response);
-      console.log('🎫 Access token:', response.access_token ? response.access_token.substring(0, 30) + '...' : 'MISSING!');
-      console.log('👤 User data:', response.user);
+
+      console.log('📥 LOGIN RESPONSE RECEIVED:');
+      console.log('   Full response:', response);
+      console.log('   Has access_token?', !!response.access_token);
+      console.log('   Token (first 50 chars):', response.access_token?.substring(0, 50) + '...');
+      console.log('   User:', response.user);
 
       if (!response.access_token) {
-        console.error('❌ ERROR: access_token is missing from response!');
+        console.error('❌ CRITICAL ERROR: access_token is MISSING from response!');
+        alert('エラー: サーバーからトークンが返されませんでした');
         setError('ログインレスポンスにトークンがありません');
+        setLoading(false);
         return;
       }
 
-      console.log('💾 Saving to localStorage...');
+      console.log('💾 SAVING TO LOCALSTORAGE:');
+      console.log('   Token length:', response.access_token.length);
+
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('user', JSON.stringify(response.user));
 
-      // 保存を確認
+      // 即座に確認
       const savedToken = localStorage.getItem('access_token');
       const savedUser = localStorage.getItem('user');
-      console.log('✅ Saved token:', savedToken ? savedToken.substring(0, 30) + '...' : 'NOT SAVED!');
-      console.log('✅ Saved user:', savedUser);
+
+      console.log('✅ VERIFICATION:');
+      console.log('   Token saved?', !!savedToken);
+      console.log('   Token matches?', savedToken === response.access_token);
+      console.log('   User saved?', !!savedUser);
 
       if (!savedToken) {
-        console.error('❌ ERROR: Failed to save token to localStorage!');
+        console.error('❌ CRITICAL ERROR: Failed to save token to localStorage!');
+        alert('エラー: localStorageへの保存に失敗しました');
         setError('トークンの保存に失敗しました');
+        setLoading(false);
         return;
       }
 
-      console.log('🚀 Redirecting to dashboard...');
-      // ページ全体をリロードして、localStorageとaxiosインターセプターを確実に初期化
-      window.location.href = '/';
+      console.log('🚀 REDIRECTING to dashboard...');
+      console.log('='.repeat(60));
+
+      // 3秒後にリダイレクト（デバッグ用に時間を設ける）
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
+
     } catch (err: any) {
-      console.error('❌ Login error:', err);
-      console.error('❌ Error response:', err.response);
+      console.error('❌ LOGIN ERROR:');
+      console.error('   Error:', err);
+      console.error('   Response:', err.response);
+      console.error('   Response data:', err.response?.data);
+      console.error('   Status:', err.response?.status);
+
+      alert(`ログインエラー: ${err.response?.data?.detail || err.message}`);
       setError(err.response?.data?.detail || 'ログインに失敗しました');
-    } finally {
       setLoading(false);
     }
   };

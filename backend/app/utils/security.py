@@ -28,6 +28,12 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
+
+    print(f"🔨 Creating token with:")
+    print(f"   - Data: {to_encode}")
+    print(f"   - SECRET_KEY (first 20 chars): {settings.SECRET_KEY[:20]}...")
+    print(f"   - Algorithm: {settings.ALGORITHM}")
+
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
@@ -35,7 +41,14 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 def decode_access_token(token: str) -> Optional[dict]:
     """アクセストークンのデコード"""
     try:
+        print(f"🔍 Decoding token with:")
+        print(f"   - SECRET_KEY (first 20 chars): {settings.SECRET_KEY[:20]}...")
+        print(f"   - Algorithm: {settings.ALGORITHM}")
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        print(f"   ✅ Decode successful: {payload}")
         return payload
-    except JWTError:
+    except JWTError as e:
+        print(f"   ❌ JWT Decode Error: {type(e).__name__}: {str(e)}")
+        print(f"   - Token (first 50 chars): {token[:50]}...")
+        print(f"   - SECRET_KEY being used (first 20 chars): {settings.SECRET_KEY[:20]}...")
         return None

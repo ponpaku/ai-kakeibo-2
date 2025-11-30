@@ -17,7 +17,11 @@ if not dotenv_path:
 
 # .envファイルを環境変数として読み込む
 if dotenv_path:
+    print(f"📁 Loading .env file from: {dotenv_path}")
     load_dotenv(dotenv_path, override=False)
+    print(f"✅ .env file loaded successfully")
+else:
+    print(f"⚠️ WARNING: .env file not found!")
 
 
 class Settings(BaseSettings):
@@ -74,3 +78,13 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# 起動時に設定を確認
+print("=" * 50)
+print("🔧 Application Settings Loaded:")
+print(f"   - Database: {settings.DB_NAME}@{settings.DB_HOST}:{settings.DB_PORT}")
+print(f"   - Redis: {settings.REDIS_HOST}:{settings.REDIS_PORT}")
+print(f"   - SECRET_KEY (first 20 chars): {settings.SECRET_KEY[:20]}...")
+print(f"   - SECRET_KEY length: {len(settings.SECRET_KEY)}")
+print(f"   - Token expire minutes: {settings.ACCESS_TOKEN_EXPIRE_MINUTES}")
+print("=" * 50)
