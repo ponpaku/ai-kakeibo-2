@@ -24,9 +24,10 @@ class Expense(Base):
     expense_date = Column(DateTime(timezone=True), nullable=False)
 
     # 詳細情報
-    store_name = Column(String(200))
-    description = Column(Text)
-    note = Column(Text)
+    product_name = Column(String(200), nullable=False)  # 商品名（必須）
+    store_name = Column(String(200))  # 店舗名（任意）
+    description = Column(Text)  # 説明（任意）
+    note = Column(Text)  # 備考（任意）
 
     # OCRとAI分類関連
     ocr_raw_text = Column(Text)  # OCRの生データ

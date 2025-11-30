@@ -43,6 +43,7 @@ async def upload_receipt(
             user_id=current_user.id,
             amount=0,  # OCRで更新される
             expense_date=datetime.now(),
+            product_name="処理中",  # OCRで更新される
             status=ExpenseStatus.PENDING
         )
         db.add(expense)

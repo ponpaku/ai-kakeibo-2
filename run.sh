@@ -63,6 +63,62 @@ fi
 # アップロードディレクトリの作成
 mkdir -p uploads/receipts
 
+# データベースマイグレーションの実行
+echo -e "${GREEN}データベースマイグレーションを実行しています...${NC}"
+cd backend
+source venv/bin/activate
+# Alembicマイグレーションを実行
+if [ -d "alembic/versions" ] && [ "$(ls -A alembic/versions)" ]; then
+    echo "マイグレーションファイルが見つかりました。実行します..."
+    python -c "
+from app.database import engine, Base
+from app.models import user, category, expense, receipt
+import os
+
+# テーブルを作成
+Base.metadata.create_all(bind=engine)
+print('データベーステーブルを作成/更新しました')
+
+# Alembicマイグレーションを手動で実行
+from alembic import context
+from alembic.config import Config
+from alembic import command
+from sqlalchemy import text
+
+# マイグレーションを実行
+try:
+    # product_nameカラムが存在するか確認
+    with engine.connect() as conn:
+        result = conn.execute(text(\"\"\"
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name='expenses' AND column_name='product_name'
+        \"\"\"))
+        if not result.fetchone():
+            print('product_nameカラムが存在しません。追加します...')
+            # カラムを追加
+            conn.execute(text('ALTER TABLE expenses ADD COLUMN product_name VARCHAR(200)'))
+            # 既存データにデフォルト値を設定
+            conn.execute(text(\"\"\"
+                UPDATE expenses
+                SET product_name = COALESCE(NULLIF(description, ''), '商品')
+                WHERE product_name IS NULL
+            \"\"\"))
+            # NOT NULL制約を追加
+            conn.execute(text('ALTER TABLE expenses ALTER COLUMN product_name SET NOT NULL'))
+            conn.commit()
+            print('product_nameカラムを追加しました')
+        else:
+            print('product_nameカラムは既に存在します')
+except Exception as e:
+    print(f'マイグレーション実行中にエラーが発生しました: {e}')
+    print('続行します...')
+"
+else
+    echo "マイグレーションファイルがありません。スキップします。"
+fi
+cd ..
+
 # バックエンドサーバーの起動
 echo -e "${GREEN}バックエンドサーバーを起動しています...${NC}"
 cd backend

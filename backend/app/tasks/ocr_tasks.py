@@ -46,6 +46,8 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
             expense.store_name = parsed_data["store_name"]
         if parsed_data.get("total_amount"):
             expense.amount = parsed_data["total_amount"]
+        if parsed_data.get("product_name"):
+            expense.product_name = parsed_data["product_name"]
 
         # OCR完了時刻を記録
         receipt.ocr_processed = True

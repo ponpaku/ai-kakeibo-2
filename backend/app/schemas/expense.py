@@ -7,9 +7,10 @@ from decimal import Decimal
 class ExpenseBase(BaseModel):
     amount: Decimal
     expense_date: datetime
-    store_name: Optional[str] = None
-    description: Optional[str] = None
-    note: Optional[str] = None
+    product_name: str  # 商品名（必須）
+    store_name: Optional[str] = None  # 店舗名（任意）
+    description: Optional[str] = None  # 説明（任意）
+    note: Optional[str] = None  # 備考（任意）
 
 
 class ExpenseCreate(ExpenseBase):
@@ -20,9 +21,10 @@ class ExpenseUpdate(BaseModel):
     amount: Optional[Decimal] = None
     expense_date: Optional[datetime] = None
     category_id: Optional[int] = None
-    store_name: Optional[str] = None
-    description: Optional[str] = None
-    note: Optional[str] = None
+    product_name: Optional[str] = None  # 商品名
+    store_name: Optional[str] = None  # 店舗名
+    description: Optional[str] = None  # 説明
+    note: Optional[str] = None  # 備考
 
 
 class Receipt(BaseModel):
@@ -63,8 +65,9 @@ class ManualExpenseCreate(BaseModel):
     """手入力用のスキーマ"""
     amount: Decimal
     expense_date: datetime
-    store_name: Optional[str] = None
-    description: Optional[str] = None
-    note: Optional[str] = None
+    product_name: str  # 商品名（必須）
+    store_name: Optional[str] = None  # 店舗名（任意）
+    description: Optional[str] = None  # 説明（任意）
+    note: Optional[str] = None  # 備考（任意）
     category_id: Optional[int] = None  # 手入力の場合は指定可能
     skip_ai_classification: bool = False  # AI分類をスキップするか

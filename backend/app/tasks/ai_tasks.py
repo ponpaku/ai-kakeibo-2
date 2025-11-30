@@ -20,6 +20,7 @@ def classify_expense_task(expense_id: int):
 
         # AI分類用のデータを準備
         expense_data = {
+            "product_name": expense.product_name,
             "store_name": expense.store_name,
             "description": expense.description,
             "amount": float(expense.amount) if expense.amount else 0,

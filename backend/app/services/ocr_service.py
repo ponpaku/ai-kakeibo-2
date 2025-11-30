@@ -58,6 +58,7 @@ class OCRService:
         """OCR結果から構造化データを抽出"""
         parsed = {
             "store_name": None,
+            "product_name": None,
             "total_amount": None,
             "date": None,
             "items": []
@@ -103,6 +104,12 @@ class OCRService:
                 if match:
                     parsed["date"] = match.group(0)
                     break
+
+            # 商品名の抽出（店舗名がある場合は「{店舗名}での購入」、ない場合は「レシート購入品」）
+            if parsed["store_name"]:
+                parsed["product_name"] = f"{parsed['store_name']}での購入"
+            else:
+                parsed["product_name"] = "レシート購入品"
 
         except Exception as e:
             print(f"OCR解析エラー: {str(e)}")

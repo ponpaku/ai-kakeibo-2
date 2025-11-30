@@ -25,9 +25,10 @@ export interface Expense {
   category_id?: number;
   amount: number;
   expense_date: string;
-  store_name?: string;
-  description?: string;
-  note?: string;
+  product_name: string;  // 商品名（必須）
+  store_name?: string;  // 店舗名（任意）
+  description?: string;  // 説明（任意）
+  note?: string;  // 備考（任意）
   status: 'pending' | 'processing' | 'completed' | 'failed';
   ai_confidence?: number;
   created_at: string;

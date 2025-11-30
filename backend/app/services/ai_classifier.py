@@ -98,10 +98,11 @@ class AIClassifier:
         prompt = f"""以下の出費データを分析し、最適なカテゴリを選択してください。
 
 # 出費データ
-- 店舗名: {expense_data.get('store_name', '不明')}
-- 説明: {expense_data.get('description', '不明')}
-- 金額: ¥{expense_data.get('amount', 0)}
-- OCRテキスト: {expense_data.get('ocr_raw_text', '無し')[:200]}
+- 商品名: {expense_data.get('product_name', '不明')}（主要な分類基準）
+- 金額: ¥{expense_data.get('amount', 0)}（主要な分類基準）
+- 店舗名: {expense_data.get('store_name', '不明')}（補助情報）
+- 説明: {expense_data.get('description', '無し')}（補助情報）
+- OCRテキスト: {expense_data.get('ocr_raw_text', '無し')[:200]}（補助情報）
 
 # 利用可能なカテゴリ
 {json.dumps(categories, ensure_ascii=False, indent=2)}
@@ -110,10 +111,11 @@ class AIClassifier:
 {json.dumps(similar_expenses, ensure_ascii=False, indent=2) if similar_expenses else '無し'}
 
 # 指示
-1. 上記の出費データから、最も適切なカテゴリを選択してください
-2. 過去の類似出費がある場合は、一貫性を保つために参考にしてください
-3. 信頼度（0.0〜1.0）を算出してください
-4. 選択理由を簡潔に説明してください
+1. 商品名と金額を主要な判断基準として、最も適切なカテゴリを選択してください
+2. 店舗名や説明は補助情報として参考にしてください
+3. 過去の類似出費がある場合は、一貫性を保つために参考にしてください
+4. 信頼度（0.0〜1.0）を算出してください
+5. 選択理由を簡潔に説明してください
 
 # 出力形式（JSON）
 {{

@@ -95,6 +95,7 @@ def create_manual_expense(
         user_id=current_user.id,
         amount=expense_in.amount,
         expense_date=expense_in.expense_date,
+        product_name=expense_in.product_name,
         store_name=expense_in.store_name,
         description=expense_in.description,
         note=expense_in.note,

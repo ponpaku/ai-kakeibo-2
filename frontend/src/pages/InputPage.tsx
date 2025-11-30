@@ -16,13 +16,19 @@ export default function InputPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState<{
+    show: boolean;
+    stage: 'uploading' | 'ocr' | 'ai' | 'complete';
+    canLeave: boolean;
+  }>({ show: false, stage: 'uploading', canLeave: false });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 手入力用
   const [manualForm, setManualForm] = useState({
     amount: 0,
-    store_name: '',
-    description: '',
+    product_name: '',  // 商品名（必須）
+    store_name: '',  // 店舗名（任意）
+    note: '',  // 備考（任意）
     category_id: undefined as number | undefined,
     expense_date: new Date().toISOString().split('T')[0],
   });
@@ -53,13 +59,37 @@ export default function InputPage() {
     if (!selectedFile) return;
 
     setUploading(true);
+
+    if (autoProcess) {
+      setProcessingStatus({ show: true, stage: 'uploading', canLeave: false });
+    }
+
     try {
       await receiptAPI.uploadReceipt(selectedFile, autoProcess);
-      alert(autoProcess ? 'レシートをアップロードし、処理を開始しました' : 'レシートをアップロードしました');
-      navigate('/');
+
+      if (autoProcess) {
+        // OCR処理段階に移行
+        setProcessingStatus({ show: true, stage: 'ocr', canLeave: true });
+
+        // 疑似的な進捗表示（実際のプロジェクトではWebSocketやポーリングで実装）
+        setTimeout(() => {
+          setProcessingStatus({ show: true, stage: 'ai', canLeave: true });
+        }, 3000);
+
+        setTimeout(() => {
+          setProcessingStatus({ show: true, stage: 'complete', canLeave: true });
+          setTimeout(() => {
+            navigate('/');
+          }, 1500);
+        }, 6000);
+      } else {
+        alert('レシートをアップロードしました');
+        navigate('/');
+      }
     } catch (error) {
       console.error('アップロードに失敗しました:', error);
       alert('アップロードに失敗しました');
+      setProcessingStatus({ show: false, stage: 'uploading', canLeave: false });
     } finally {
       setUploading(false);
     }
@@ -182,6 +212,92 @@ export default function InputPage() {
               </div>
             )}
           </div>
+
+          {/* OCR処理中モーダル */}
+          {processingStatus.show && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg p-8 max-w-md w-full">
+                <h2 className="text-xl font-bold text-gray-900 mb-6 text-center">
+                  レシート処理中
+                </h2>
+
+                <div className="space-y-4">
+                  {/* 進捗表示 */}
+                  <div className={`flex items-center gap-3 p-3 rounded-lg ${
+                    processingStatus.stage === 'uploading' ? 'bg-blue-50' : 'bg-gray-50'
+                  }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                      processingStatus.stage === 'uploading' ? 'bg-blue-500' :
+                      processingStatus.stage !== 'uploading' ? 'bg-green-500' : 'bg-gray-300'
+                    }`}>
+                      {processingStatus.stage !== 'uploading' && (
+                        <span className="text-white text-sm">✓</span>
+                      )}
+                    </div>
+                    <span className="text-gray-700">アップロード中...</span>
+                  </div>
+
+                  <div className={`flex items-center gap-3 p-3 rounded-lg ${
+                    processingStatus.stage === 'ocr' ? 'bg-blue-50' : 'bg-gray-50'
+                  }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                      processingStatus.stage === 'ocr' ? 'bg-blue-500 animate-pulse' :
+                      ['ai', 'complete'].includes(processingStatus.stage) ? 'bg-green-500' : 'bg-gray-300'
+                    }`}>
+                      {['ai', 'complete'].includes(processingStatus.stage) && (
+                        <span className="text-white text-sm">✓</span>
+                      )}
+                    </div>
+                    <span className="text-gray-700">OCR処理中...</span>
+                  </div>
+
+                  <div className={`flex items-center gap-3 p-3 rounded-lg ${
+                    processingStatus.stage === 'ai' ? 'bg-blue-50' : 'bg-gray-50'
+                  }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                      processingStatus.stage === 'ai' ? 'bg-blue-500 animate-pulse' :
+                      processingStatus.stage === 'complete' ? 'bg-green-500' : 'bg-gray-300'
+                    }`}>
+                      {processingStatus.stage === 'complete' && (
+                        <span className="text-white text-sm">✓</span>
+                      )}
+                    </div>
+                    <span className="text-gray-700">AI分類中...</span>
+                  </div>
+
+                  <div className={`flex items-center gap-3 p-3 rounded-lg ${
+                    processingStatus.stage === 'complete' ? 'bg-green-50' : 'bg-gray-50'
+                  }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                      processingStatus.stage === 'complete' ? 'bg-green-500' : 'bg-gray-300'
+                    }`}>
+                      {processingStatus.stage === 'complete' && (
+                        <span className="text-white text-sm">✓</span>
+                      )}
+                    </div>
+                    <span className="text-gray-700">完了</span>
+                  </div>
+                </div>
+
+                {processingStatus.canLeave && (
+                  <div className="mt-6">
+                    <button
+                      onClick={() => {
+                        setProcessingStatus({ show: false, stage: 'uploading', canLeave: false });
+                        navigate('/');
+                      }}
+                      className="w-full px-4 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                    >
+                      あとは任せる
+                    </button>
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                      処理は続行されます。ダッシュボードに戻ります。
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </Layout>
     );
@@ -199,10 +315,27 @@ export default function InputPage() {
 
         <h1 className="text-2xl font-bold text-gray-900 mb-6">手入力</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="max-w-2xl mx-auto">
           {/* 入力フォーム */}
           <div className="bg-white p-6 rounded-lg shadow-md">
             <form onSubmit={handleManualSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  商品名 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={manualForm.product_name}
+                  onChange={(e) => setManualForm({ ...manualForm, product_name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="例: キュキュット、洗剤、食材など"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  正式名称でなくても構いません。何を買ったのかが分かればOKです。
+                </p>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   金額 <span className="text-red-500">*</span>
@@ -240,7 +373,7 @@ export default function InputPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  店舗名
+                  店舗名（任意）
                 </label>
                 <input
                   type="text"
@@ -253,14 +386,14 @@ export default function InputPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  説明・メモ
+                  備考（任意）
                 </label>
                 <textarea
-                  value={manualForm.description}
-                  onChange={(e) => setManualForm({ ...manualForm, description: e.target.value })}
+                  value={manualForm.note}
+                  onChange={(e) => setManualForm({ ...manualForm, note: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   rows={3}
-                  placeholder="例: 食材購入"
+                  placeholder="例: セール品、まとめ買いなど"
                 />
               </div>
 
@@ -288,10 +421,15 @@ export default function InputPage() {
               </button>
             </form>
           </div>
+        </div>
 
-          {/* 電卓 */}
-          {showCalculator && (
-            <div>
+        {/* 電卓モーダル */}
+        {showCalculator && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowCalculator(false)}
+          >
+            <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md">
               <Calculator
                 onCalculate={(value) => {
                   setManualForm({ ...manualForm, amount: value });
@@ -299,8 +437,8 @@ export default function InputPage() {
                 }}
               />
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

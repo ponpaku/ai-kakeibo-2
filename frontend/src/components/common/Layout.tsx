@@ -41,7 +41,7 @@ export default function Layout({ children }: LayoutProps) {
       </header>
 
       {/* メインコンテンツ */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:ml-64 pb-20 md:pb-8">
         {children}
       </main>
 
@@ -92,15 +92,6 @@ export default function Layout({ children }: LayoutProps) {
           })}
         </div>
       </nav>
-
-      {/* デスクトップ向けコンテンツのマージン調整 */}
-      <style>{`
-        @media (min-width: 768px) {
-          main {
-            margin-left: 16rem;
-          }
-        }
-      `}</style>
     </div>
   );
 }
