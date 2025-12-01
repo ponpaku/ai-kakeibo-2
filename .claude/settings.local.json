@@ -39,7 +39,8 @@
       "WebFetch(domain:www.radix-ui.com)",
       "WebFetch(domain:stackoverflow.com)",
       "WebFetch",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "WebSearch"
     ],
     "deny": []
   }

@@ -31,5 +31,4 @@ redis>=5.2.0,<6.0.0
 # OCR
 # yomitoku は requirements.txt ではなく直接インストールしてください:
 # pip install yomitoku
-opencv-python>=4.8.0,<5.0.0
-numpy>=1.24.0,<2.0.0
+# CLI呼び出しを使用するため、opencvやnumpyは不要
