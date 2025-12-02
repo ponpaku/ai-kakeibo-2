@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import Layout from '@/components/common/Layout';
-import { userAPI, categoryAPI } from '@/services/api';
-import type { User, Category } from '@/types';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { userAPI, categoryAPI, aiSettingsAPI } from '@/services/api';
+import type { User, Category, AISettings } from '@/types';
+import { Plus, Edit, Trash2, Settings } from 'lucide-react';
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<'users' | 'categories'>('categories');
+  const [tab, setTab] = useState<'categories' | 'users' | 'ai-settings'>('categories');
   const [users, setUsers] = useState<User[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [aiSettings, setAiSettings] = useState<AISettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
 
@@ -22,9 +24,12 @@ export default function AdminPage() {
       if (tab === 'users') {
         const data = await userAPI.listUsers();
         setUsers(data);
-      } else {
+      } else if (tab === 'categories') {
         const data = await categoryAPI.listCategories(false);
         setCategories(data);
+      } else if (tab === 'ai-settings') {
+        const data = await aiSettingsAPI.getSettings();
+        setAiSettings(data);
       }
     } catch (error) {
       console.error('データの読み込みに失敗しました:', error);
@@ -55,6 +60,30 @@ export default function AdminPage() {
     }
   };
 
+  const handleSaveAISettings = async () => {
+    if (!aiSettings) return;
+
+    setSaving(true);
+    try {
+      const updated = await aiSettingsAPI.updateSettings({
+        ocr_model: aiSettings.ocr_model,
+        ocr_enabled: aiSettings.ocr_enabled,
+        classification_model: aiSettings.classification_model,
+        classification_enabled: aiSettings.classification_enabled,
+        sandbox_mode: aiSettings.sandbox_mode,
+        skip_git_repo_check: aiSettings.skip_git_repo_check,
+        ocr_system_prompt: aiSettings.ocr_system_prompt,
+        classification_system_prompt: aiSettings.classification_system_prompt,
+      });
+      setAiSettings(updated);
+      alert('AI設定を保存しました');
+    } catch (error: any) {
+      alert(error.response?.data?.detail || '保存に失敗しました');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
@@ -81,6 +110,17 @@ export default function AdminPage() {
             }`}
           >
             ユーザー管理
+          </button>
+          <button
+            onClick={() => setTab('ai-settings')}
+            className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors ${
+              tab === 'ai-settings'
+                ? 'text-primary-600 border-b-2 border-primary-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Settings size={18} />
+            AI設定
           </button>
         </div>
 
@@ -241,6 +281,155 @@ export default function AdminPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* AI設定 */}
+        {tab === 'ai-settings' && aiSettings && (
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-6">AI設定（Codex Exec）</h2>
+
+            <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
+              {/* OCR設定 */}
+              <div className="border-b pb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">OCR設定</h3>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={aiSettings.ocr_enabled}
+                        onChange={(e) =>
+                          setAiSettings({ ...aiSettings, ocr_enabled: e.target.checked })
+                        }
+                        className="w-5 h-5 text-primary-600"
+                      />
+                      <span className="font-medium">OCRを有効化</span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      OCRモデル
+                    </label>
+                    <input
+                      type="text"
+                      value={aiSettings.ocr_model}
+                      onChange={(e) =>
+                        setAiSettings({ ...aiSettings, ocr_model: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      placeholder="gpt-5.1-codex-mini"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      例: gpt-5.1-codex-mini, gpt-4, gpt-3.5-turbo など
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 分類設定 */}
+              <div className="border-b pb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">分類設定</h3>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={aiSettings.classification_enabled}
+                        onChange={(e) =>
+                          setAiSettings({
+                            ...aiSettings,
+                            classification_enabled: e.target.checked,
+                          })
+                        }
+                        className="w-5 h-5 text-primary-600"
+                      />
+                      <span className="font-medium">AI分類を有効化</span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      分類モデル
+                    </label>
+                    <input
+                      type="text"
+                      value={aiSettings.classification_model}
+                      onChange={(e) =>
+                        setAiSettings({
+                          ...aiSettings,
+                          classification_model: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      placeholder="gpt-5.1-codex-mini"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      例: gpt-5.1-codex-mini, gpt-4, gpt-3.5-turbo など
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Codex Exec共通設定 */}
+              <div className="border-b pb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Codex Exec共通設定
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      サンドボックスモード
+                    </label>
+                    <select
+                      value={aiSettings.sandbox_mode}
+                      onChange={(e) =>
+                        setAiSettings({ ...aiSettings, sandbox_mode: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="read-only">read-only（推奨）</option>
+                      <option value="none">none</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      セキュリティのため read-only を推奨します
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={aiSettings.skip_git_repo_check}
+                        onChange={(e) =>
+                          setAiSettings({
+                            ...aiSettings,
+                            skip_git_repo_check: e.target.checked,
+                          })
+                        }
+                        className="w-5 h-5 text-primary-600"
+                      />
+                      <span className="font-medium">Gitリポジトリチェックをスキップ</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* 保存ボタン */}
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSaveAISettings}
+                  disabled={saving}
+                  className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+                >
+                  {saving ? '保存中...' : '設定を保存'}
+                </button>
+              </div>
             </div>
           </div>
         )}

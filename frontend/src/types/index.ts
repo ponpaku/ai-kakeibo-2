@@ -81,3 +81,26 @@ export interface LoginResponse {
   token_type: string;
   user: User;
 }
+
+export interface AISettings {
+  id: number;
+  ocr_model: string;
+  ocr_enabled: boolean;
+  classification_model: string;
+  classification_enabled: boolean;
+  sandbox_mode: string;
+  skip_git_repo_check: boolean;
+  ocr_system_prompt?: string;
+  classification_system_prompt?: string;
+}
+
+export interface AISettingsUpdate {
+  ocr_model: string;
+  ocr_enabled: boolean;
+  classification_model: string;
+  classification_enabled: boolean;
+  sandbox_mode: string;
+  skip_git_repo_check: boolean;
+  ocr_system_prompt?: string;
+  classification_system_prompt?: string;
+}

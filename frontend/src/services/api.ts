@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Category, Expense, DashboardSummary, LoginResponse } from '@/types';
+import type { User, Category, Expense, DashboardSummary, LoginResponse, AISettings, AISettingsUpdate } from '@/types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -176,6 +176,18 @@ export const dashboardAPI = {
     const response = await api.get<Expense[]>('/dashboard/recent-expenses', {
       params: { limit },
     });
+    return response.data;
+  },
+};
+
+// AI設定API
+export const aiSettingsAPI = {
+  getSettings: async (): Promise<AISettings> => {
+    const response = await api.get<AISettings>('/ai-settings/');
+    return response.data;
+  },
+  updateSettings: async (data: AISettingsUpdate): Promise<AISettings> => {
+    const response = await api.put<AISettings>('/ai-settings/', data);
     return response.data;
   },
 };
