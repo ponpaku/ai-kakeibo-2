@@ -69,3 +69,17 @@ def get_current_admin(
             detail="管理者権限が必要です"
         )
     return current_user
+
+
+def require_admin(current_user: User) -> None:
+    """
+    管理者権限を確認（関数形式）
+
+    Dependsではなく、直接呼び出して使用する場合用
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="管理者権限が必要です"
+        )
+
