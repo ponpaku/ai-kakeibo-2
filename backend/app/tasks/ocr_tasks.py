@@ -139,7 +139,12 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
         # OCR完了時刻を記録
         receipt.ocr_processed = True
         receipt.ocr_completed_at = datetime.utcnow()
-        expense.status = ExpenseStatus.PROCESSED
+
+        # カテゴリが設定されていれば完了、なければ処理中のまま
+        if expense.category_id:
+            expense.status = ExpenseStatus.COMPLETED
+        else:
+            expense.status = ExpenseStatus.PROCESSING
 
         db.commit()
 
