@@ -59,56 +59,69 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onViewReceipt 
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {expenses.map((expense) => (
-              <tr key={expense.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {format(new Date(expense.expense_date), 'yyyy/MM/dd')}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {expense.store_name || '-'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {expense.category_name || '未分類'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
-                  ¥{expense.amount.toLocaleString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  {getStatusBadge(expense.status)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex items-center justify-end gap-2">
-                    {expense.receipt && (
-                      <button
-                        onClick={() => onViewReceipt(expense.receipt!.id)}
-                        className="text-blue-600 hover:text-blue-900"
-                        title="レシートを表示"
-                      >
-                        <ImageIcon size={18} />
-                      </button>
+            {expenses.map((expense) => {
+              // 最初のItemのカテゴリを表示
+              const firstItemCategory = expense.items && expense.items.length > 0
+                ? expense.items[0].category_name
+                : null;
+
+              return (
+                <tr key={expense.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {format(new Date(expense.occurred_at), 'yyyy/MM/dd')}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div>{expense.title || expense.merchant_name || '-'}</div>
+                    {expense.items && expense.items.length > 1 && (
+                      <div className="text-xs text-gray-500">他{expense.items.length - 1}件</div>
                     )}
-                    <button
-                      onClick={() => onEdit(expense)}
-                      className="text-primary-600 hover:text-primary-900"
-                      title="編集"
-                    >
-                      <Edit size={18} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (window.confirm('この出費を削除しますか？')) {
-                          onDelete(expense.id);
-                        }
-                      }}
-                      className="text-red-600 hover:text-red-900"
-                      title="削除"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {firstItemCategory || '未分類'}
+                    {expense.items && expense.items.length > 1 && (
+                      <span className="text-xs text-gray-500"> 他</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
+                    ¥{expense.total_amount.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {getStatusBadge(expense.status)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex items-center justify-end gap-2">
+                      {expense.receipt && (
+                        <button
+                          onClick={() => onViewReceipt(expense.receipt!.id)}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="レシートを表示"
+                        >
+                          <ImageIcon size={18} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onEdit(expense)}
+                        className="text-primary-600 hover:text-primary-900"
+                        title="編集"
+                      >
+                        <Edit size={18} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm('この出費を削除しますか？')) {
+                            onDelete(expense.id);
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-900"
+                        title="削除"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

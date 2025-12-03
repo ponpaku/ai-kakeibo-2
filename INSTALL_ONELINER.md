@@ -20,19 +20,19 @@ requirements.txtを使わずに、すべての依存関係を一度にインス�
 ### Linux / Mac
 
 ```bash
-cd backend && python3 -m venv venv && source venv/bin/activate && pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" bcrypt==3.2.2 python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1 yomitoku==0.3.0 && python init_db.py && cd ..
+cd backend && python3 -m venv venv && source venv/bin/activate && pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" bcrypt==3.2.2 python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1 && python init_db.py && cd ..
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-cd backend; python -m venv venv; .\venv\Scripts\activate; pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" bcrypt==3.2.2 python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1 yomitoku==0.3.0; python init_db.py; cd ..
+cd backend; python -m venv venv; .\venv\Scripts\activate; pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" bcrypt==3.2.2 python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1; python init_db.py; cd ..
 ```
 
 ### Windows (Command Prompt)
 
 ```bat
-cd backend && python -m venv venv && venv\Scripts\activate.bat && pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" bcrypt==3.2.2 python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1 yomitoku==0.3.0 && python init_db.py && cd ..
+cd backend && python -m venv venv && venv\Scripts\activate.bat && pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" bcrypt==3.2.2 python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1 && python init_db.py && cd ..
 ```
 
 ## 分割版（より読みやすい）
@@ -48,7 +48,7 @@ python3 -m venv venv
 source venv/bin/activate
 
 # 2. 依存関係のインストール（ワンライナー）
-pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" bcrypt==3.2.2 python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1 yomitoku==0.3.0
+pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" bcrypt==3.2.2 python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1
 
 # 3. データベース初期化
 python init_db.py
@@ -66,7 +66,7 @@ python -m venv venv
 venv\Scripts\activate.bat
 
 REM 2. 依存関係のインストール（ワンライナー）
-pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" bcrypt==3.2.2 python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1 yomitoku==0.3.0
+pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" bcrypt==3.2.2 python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1
 
 REM 3. データベース初期化
 python init_db.py
@@ -90,18 +90,18 @@ cd frontend && npm install && cd ..
 ### Linux / Mac
 
 ```bash
-cd backend && python3 -m venv venv && source venv/bin/activate && pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" bcrypt==3.2.2 python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1 yomitoku==0.3.0 && python init_db.py && deactivate && cd ../frontend && npm install && cd ..
+cd backend && python3 -m venv venv && source venv/bin/activate && pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" bcrypt==3.2.2 python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1 && python init_db.py && deactivate && cd ../frontend && npm install && cd ..
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-cd backend; python -m venv venv; .\venv\Scripts\activate; pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" bcrypt==3.2.2 python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1 yomitoku==0.3.0; python init_db.py; deactivate; cd ..\frontend; npm install; cd ..
+cd backend; python -m venv venv; .\venv\Scripts\activate; pip install fastapi==0.109.0 uvicorn[standard]==0.27.0 sqlalchemy==2.0.25 pymysql==1.1.0 cryptography==42.0.0 python-multipart==0.0.6 "python-jose[cryptography]==3.3.0" "passlib[bcrypt]==1.7.4" bcrypt==3.2.2 python-dotenv==1.0.0 celery==5.3.6 redis==5.0.1 pillow==10.2.0 pydantic==2.5.3 pydantic-settings==2.1.0 alembic==1.13.1; python init_db.py; deactivate; cd ..\frontend; npm install; cd ..
 ```
 
 ## パッケージ一覧
 
-インストールされるパッケージ（17個）：
+インストールされるパッケージ（16個）：
 
 | パッケージ | バージョン | 用途 |
 |-----------|----------|------|
@@ -121,7 +121,6 @@ cd backend; python -m venv venv; .\venv\Scripts\activate; pip install fastapi==0
 | pydantic | 2.5.3 | データ検証 |
 | pydantic-settings | 2.1.0 | 設定管理 |
 | alembic | 1.13.1 | DBマイグレーション |
-| yomitoku | 0.3.0 | OCRライブラリ |
 
 ## 注意事項
 

@@ -15,12 +15,12 @@ export default function DashboardPage() {
   const [selectedReceipt, setSelectedReceipt] = useState<number | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [editForm, setEditForm] = useState({
-    product_name: '',
-    amount: 0,
-    expense_date: '',
-    store_name: '',
+    title: '',
+    total_amount: 0,
+    occurred_at: '',
+    merchant_name: '',
     note: '',
-    category_id: undefined as number | undefined,
+    payment_method: '',
   });
 
   useEffect(() => {
@@ -55,12 +55,12 @@ export default function DashboardPage() {
   const handleEditExpense = (expense: Expense) => {
     setEditingExpense(expense);
     setEditForm({
-      product_name: expense.product_name,
-      amount: expense.amount,
-      expense_date: expense.expense_date.split('T')[0],
-      store_name: expense.store_name || '',
+      title: expense.title || '',
+      total_amount: expense.total_amount,
+      occurred_at: expense.occurred_at.split('T')[0],
+      merchant_name: expense.merchant_name || '',
       note: expense.note || '',
-      category_id: expense.category_id,
+      payment_method: expense.payment_method || '',
     });
   };
 
@@ -235,12 +235,12 @@ export default function DashboardPage() {
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  商品名 <span className="text-red-500">*</span>
+                  タイトル <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  value={editForm.product_name}
-                  onChange={(e) => setEditForm({ ...editForm, product_name: e.target.value })}
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   required
                 />
@@ -248,12 +248,12 @@ export default function DashboardPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  金額 <span className="text-red-500">*</span>
+                  合計金額 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
-                  value={editForm.amount || ''}
-                  onChange={(e) => setEditForm({ ...editForm, amount: parseFloat(e.target.value) || 0 })}
+                  value={editForm.total_amount || ''}
+                  onChange={(e) => setEditForm({ ...editForm, total_amount: parseInt(e.target.value) || 0 })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   required
                 />
@@ -265,8 +265,8 @@ export default function DashboardPage() {
                 </label>
                 <input
                   type="date"
-                  value={editForm.expense_date}
-                  onChange={(e) => setEditForm({ ...editForm, expense_date: e.target.value })}
+                  value={editForm.occurred_at}
+                  onChange={(e) => setEditForm({ ...editForm, occurred_at: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   required
                 />
@@ -274,14 +274,32 @@ export default function DashboardPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  店舗名（任意）
+                  店舗名/加盟店名（任意）
                 </label>
                 <input
                   type="text"
-                  value={editForm.store_name}
-                  onChange={(e) => setEditForm({ ...editForm, store_name: e.target.value })}
+                  value={editForm.merchant_name}
+                  onChange={(e) => setEditForm({ ...editForm, merchant_name: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  支払い方法（任意）
+                </label>
+                <select
+                  value={editForm.payment_method}
+                  onChange={(e) => setEditForm({ ...editForm, payment_method: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="">未選択</option>
+                  <option value="cash">現金</option>
+                  <option value="credit">クレジットカード</option>
+                  <option value="debit">デビットカード</option>
+                  <option value="e-money">電子マネー</option>
+                  <option value="qr">QRコード決済</option>
+                </select>
               </div>
 
               <div>
@@ -294,22 +312,6 @@ export default function DashboardPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   rows={3}
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  カテゴリ（任意）
-                </label>
-                <select
-                  value={editForm.category_id || ''}
-                  onChange={(e) => setEditForm({ ...editForm, category_id: e.target.value ? parseInt(e.target.value) : undefined })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">未分類</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
               </div>
 
               <div className="flex gap-3">

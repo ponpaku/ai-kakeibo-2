@@ -28,7 +28,5 @@ python-dotenv>=1.0.1,<2.0.0
 celery>=5.4.0,<6.0.0
 redis>=5.2.0,<6.0.0
 
-# OCR
-# yomitoku は requirements.txt ではなく直接インストールしてください:
-# pip install yomitoku
-# CLI呼び出しを使用するため、opencvやnumpyは不要
+# OCR & AI Classification
+# Codex exec を使用（別途セットアップが必要）

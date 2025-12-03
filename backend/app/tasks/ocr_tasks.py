@@ -1,14 +1,17 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from app.tasks.celery_app import celery_app
 from app.database import SessionLocal
 from app.models.expense import Expense, ExpenseStatus
+from app.models.expense_item import ExpenseItem, CategorySource
 from app.models.receipt import Receipt
 from app.models.category import Category
 from app.models.ai_settings import AISettings
 from app.services.codex_service import CodexService
 from app.services.image_service import ImageService
-from app.tasks.ai_tasks import classify_expense_task
+from app.tasks.ai_tasks import classify_expense_item_task
+from app.constants import OCR_SCHEMA_VERSION
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +20,7 @@ logger = logging.getLogger(__name__)
 def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
     """
     レシートのOCR処理タスク（Codex exec使用）
+    ExpenseItem複数作成に対応
 
     Args:
         expense_id: Expense ID
@@ -52,7 +56,7 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
             return {"success": False, "error": "OCR is disabled"}
 
         # OCR開始時刻を記録
-        receipt.ocr_started_at = datetime.utcnow()
+        receipt.ocr_started_at = datetime.now(timezone.utc)
         expense.status = ExpenseStatus.PROCESSING
         db.commit()
 
@@ -62,6 +66,7 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
         # カテゴリ一覧を取得
         categories = db.query(Category).filter(Category.is_active == True).all()
         category_names = [cat.name for cat in categories]
+        category_map = {cat.name: cat.id for cat in categories}
 
         logger.info(f"OCR処理開始: expense_id={expense_id}, model={ai_settings.ocr_model}")
 
@@ -83,79 +88,133 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
 
         # OCR結果を取得
         data = ocr_result.get("data", {})
+        raw_output = ocr_result.get("raw_output", "")
         logger.info(f"OCR成功: store={data.get('store')}, items={len(data.get('items', []))}")
 
-        # OCR結果をExpenseに保存
-        expense.ocr_raw_text = ocr_result.get("raw_output")
+        # Receipt: OCR結果の完全なJSONを保存
+        receipt.ocr_raw_output = json.dumps(data, ensure_ascii=False)
+        receipt.ocr_engine = "codex"
+        receipt.ocr_model = ai_settings.ocr_model
+        receipt.schema_version = OCR_SCHEMA_VERSION
+        receipt.ocr_processed = True
+        receipt.ocr_completed_at = datetime.now(timezone.utc)
 
-        # 店舗名
-        if data.get("store"):
-            expense.store_name = data["store"]
-
-        # 商品名と金額を決定
-        items = data.get("items", [])
-        if items:
-            # 最初の商品をメインとする、または合計金額を使用
-            if len(items) == 1:
-                expense.product_name = items[0].get("name") or "レシート購入品"
-                expense.amount = items[0].get("line_total") or 0
-            else:
-                # 複数商品の場合は店舗名を使用
-                expense.product_name = f"{expense.store_name or ''}での購入"
-                # 合計金額を計算
-                total = sum(item.get("line_total", 0) or 0 for item in items)
-                expense.amount = total if total > 0 else (data.get("payment", {}).get("amount") if isinstance(data.get("payment"), dict) else 0)
-
-            # 最初の商品のカテゴリを使用
-            first_item_category = items[0].get("category")
-            if first_item_category:
-                category = db.query(Category).filter(Category.name == first_item_category).first()
-                if category:
-                    expense.category_id = category.id
-        else:
-            # 商品がない場合
-            expense.product_name = f"{expense.store_name or 'レシート'}での購入"
-            # 支払い金額を使用
-            payment = data.get("payment")
-            if payment and isinstance(payment, dict):
-                expense.amount = payment.get("amount") or 0
-
+        # Expense: 決済ヘッダ情報を設定
         # 日付
         if data.get("date"):
             try:
-                # 日付をパース（YYYY/MM/DD, YYYY-MM-DD など）
                 from datetime import datetime as dt
                 date_str = data["date"]
-                # 複数の形式を試す
                 for fmt in ["%Y/%m/%d", "%Y-%m-%d", "%Y年%m月%d日"]:
                     try:
-                        expense.expense_date = dt.strptime(date_str, fmt)
+                        expense.occurred_at = dt.strptime(date_str, fmt)
                         break
                     except ValueError:
                         continue
             except Exception as e:
                 logger.warning(f"日付のパースに失敗: {data.get('date')} - {str(e)}")
 
-        # OCR完了時刻を記録
-        receipt.ocr_processed = True
-        receipt.ocr_completed_at = datetime.utcnow()
+        # 店舗名/加盟店名
+        expense.merchant_name = data.get("store")
 
-        # カテゴリが設定されていれば完了、なければ処理中のまま
-        if expense.category_id:
-            expense.status = ExpenseStatus.COMPLETED
+        # タイトル生成
+        if expense.merchant_name:
+            expense.title = f"{expense.merchant_name}での購入"
         else:
+            expense.title = "レシート購入"
+
+        # 決済情報
+        payment = data.get("payment", {})
+        if isinstance(payment, dict):
+            expense.total_amount = payment.get("amount") or 0
+            expense.payment_method = payment.get("method")
+            expense.card_brand = payment.get("card_brand")
+            expense.card_last4 = payment.get("card_last4")
+        else:
+            expense.total_amount = 0
+
+        # ポイント情報
+        points = data.get("points", {})
+        if isinstance(points, dict):
+            expense.points_used = points.get("used")
+            expense.points_earned = points.get("earned")
+            expense.points_program = points.get("program")
+
+        # ExpenseItem: 商品明細を作成
+        items = data.get("items", [])
+        uncategorized_item_ids = []
+
+        if items:
+            for position, item_data in enumerate(items):
+                product_name = item_data.get("name") or "不明な商品"
+                quantity = item_data.get("quantity")
+                unit_price = item_data.get("unit_price")
+                line_total = item_data.get("line_total") or 0
+
+                # カテゴリ名からIDを取得
+                category_name = item_data.get("category")
+                category_id = None
+                category_source = None
+
+                if category_name and category_name in category_map:
+                    category_id = category_map[category_name]
+                    category_source = CategorySource.OCR
+
+                # ExpenseItem作成
+                expense_item = ExpenseItem(
+                    expense_id=expense_id,
+                    position=position,
+                    product_name=product_name,
+                    quantity=quantity,
+                    unit_price=unit_price,
+                    line_total=line_total,
+                    category_id=category_id,
+                    category_source=category_source,
+                    raw=json.dumps(item_data, ensure_ascii=False)
+                )
+                db.add(expense_item)
+                db.flush()  # IDを取得
+
+                # カテゴリ未設定の場合はAI分類対象
+                if category_id is None:
+                    uncategorized_item_ids.append(expense_item.id)
+
+            # total_amountが未設定の場合は商品合計を使用
+            if expense.total_amount == 0:
+                expense.total_amount = sum(item.get("line_total", 0) or 0 for item in items)
+        else:
+            # 商品がない場合でも最低1つのExpenseItemを作成
+            expense_item = ExpenseItem(
+                expense_id=expense_id,
+                position=0,
+                product_name=expense.title or "レシート購入品",
+                line_total=expense.total_amount or 0,
+                category_id=None,
+                category_source=None
+            )
+            db.add(expense_item)
+            db.flush()
+            uncategorized_item_ids.append(expense_item.id)
+
+        # ステータス決定: 全てカテゴリ設定済みならCOMPLETED、未設定があればPROCESSING
+        if uncategorized_item_ids:
             expense.status = ExpenseStatus.PROCESSING
+        else:
+            expense.status = ExpenseStatus.COMPLETED
 
         db.commit()
 
-        # AI分類タスクを実行（skip_aiがFalseかつカテゴリが未設定の場合）
-        if not skip_ai and not expense.category_id:
-            logger.info(f"AI分類タスクを開始: expense_id={expense_id}")
-            classify_expense_task.delay(expense_id)
+        # AI分類タスクを実行（skip_aiがFalseかつカテゴリ未設定の商品がある場合）
+        if not skip_ai and uncategorized_item_ids:
+            logger.info(f"AI分類タスクを開始: {len(uncategorized_item_ids)}個の商品")
+            for item_id in uncategorized_item_ids:
+                classify_expense_item_task.delay(item_id)
 
         return {
             "success": True,
             "expense_id": expense_id,
+            "items_created": len(items) if items else 1,
+            "uncategorized_items": len(uncategorized_item_ids),
             "ocr_result": data
         }
 

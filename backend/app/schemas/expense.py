@@ -4,27 +4,69 @@ from datetime import datetime
 from decimal import Decimal
 
 
+# ExpenseItem（商品明細）スキーマ
+class ExpenseItemBase(BaseModel):
+    product_name: str
+    quantity: Optional[Decimal] = None
+    unit_price: Optional[int] = None
+    line_total: int
+    category_id: Optional[int] = None
+
+
+class ExpenseItemCreate(ExpenseItemBase):
+    pass
+
+
+class ExpenseItem(ExpenseItemBase):
+    id: int
+    expense_id: int
+    position: int
+    category_source: Optional[str] = None
+    ai_confidence: Optional[Decimal] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ExpenseItemWithCategory(ExpenseItem):
+    category_name: Optional[str] = None
+
+
+# Expense（決済ヘッダ）スキーマ
 class ExpenseBase(BaseModel):
-    amount: Decimal
-    expense_date: datetime
-    product_name: str  # 商品名（必須）
-    store_name: Optional[str] = None  # 店舗名（任意）
-    description: Optional[str] = None  # 説明（任意）
-    note: Optional[str] = None  # 備考（任意）
+    occurred_at: datetime  # 発生日時
+    merchant_name: Optional[str] = None  # 店舗名/加盟店名
+    title: Optional[str] = None  # 決済のタイトル
+    total_amount: int  # 合計金額（円）
+    currency: str = "JPY"  # 通貨コード
+    payment_method: Optional[str] = None  # 支払い方法
+    card_brand: Optional[str] = None  # カードブランド
+    card_last4: Optional[str] = None  # カード下4桁
+    points_used: Optional[int] = None  # 使用ポイント
+    points_earned: Optional[int] = None  # 獲得ポイント
+    points_program: Optional[str] = None  # ポイントプログラム名
+    description: Optional[str] = None  # 説明
+    note: Optional[str] = None  # 備考
 
 
 class ExpenseCreate(ExpenseBase):
-    category_id: Optional[int] = None
+    pass
 
 
 class ExpenseUpdate(BaseModel):
-    amount: Optional[Decimal] = None
-    expense_date: Optional[datetime] = None
-    category_id: Optional[int] = None
-    product_name: Optional[str] = None  # 商品名
-    store_name: Optional[str] = None  # 店舗名
-    description: Optional[str] = None  # 説明
-    note: Optional[str] = None  # 備考
+    occurred_at: Optional[datetime] = None
+    merchant_name: Optional[str] = None
+    title: Optional[str] = None
+    total_amount: Optional[int] = None
+    currency: Optional[str] = None
+    payment_method: Optional[str] = None
+    card_brand: Optional[str] = None
+    card_last4: Optional[str] = None
+    points_used: Optional[int] = None
+    points_earned: Optional[int] = None
+    points_program: Optional[str] = None
+    description: Optional[str] = None
+    note: Optional[str] = None
 
 
 class Receipt(BaseModel):
@@ -41,7 +83,6 @@ class Receipt(BaseModel):
 class Expense(ExpenseBase):
     id: int
     user_id: int
-    category_id: Optional[int]
     status: str
     ai_confidence: Optional[Decimal]
     created_at: datetime
@@ -53,7 +94,7 @@ class Expense(ExpenseBase):
 
 class ExpenseWithReceipt(Expense):
     receipt: Optional[Receipt] = None
-    category_name: Optional[str] = None
+    items: List[ExpenseItemWithCategory] = []
 
 
 class ExpenseListResponse(BaseModel):
@@ -63,11 +104,12 @@ class ExpenseListResponse(BaseModel):
 
 class ManualExpenseCreate(BaseModel):
     """手入力用のスキーマ"""
-    amount: Decimal
-    expense_date: datetime
-    product_name: str  # 商品名（必須）
-    store_name: Optional[str] = None  # 店舗名（任意）
+    occurred_at: datetime  # 発生日時
+    merchant_name: Optional[str] = None  # 店舗名/加盟店名
+    total_amount: int  # 合計金額（円）
+    product_name: Optional[str] = None  # 商品名（単一商品の場合）
     description: Optional[str] = None  # 説明（任意）
     note: Optional[str] = None  # 備考（任意）
     category_id: Optional[int] = None  # 手入力の場合は指定可能
     skip_ai_classification: bool = False  # AI分類をスキップするか
+    payment_method: Optional[str] = None  # 支払い方法

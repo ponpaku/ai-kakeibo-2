@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -21,6 +21,12 @@ class Receipt(Base):
     ocr_processed = Column(Boolean, default=False)
     ocr_started_at = Column(DateTime(timezone=True))
     ocr_completed_at = Column(DateTime(timezone=True))
+
+    # OCR結果とメタデータ
+    ocr_raw_output = Column(Text, nullable=True)  # OCRの完全なJSON出力
+    ocr_engine = Column(String(50), nullable=True)  # OCRエンジン名（"codex", "yomitoku", etc.）
+    ocr_model = Column(String(100), nullable=True)  # 使用されたモデル名
+    schema_version = Column(String(20), nullable=True)  # JSONスキーマバージョン
 
     # タイムスタンプ
     created_at = Column(DateTime(timezone=True), server_default=func.now())

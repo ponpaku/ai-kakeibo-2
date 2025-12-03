@@ -18,4 +18,5 @@ class Category(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # リレーション
-    expenses = relationship("Expense", back_populates="category")
+    # カテゴリはExpenseItemに紐づく（Expenseには紐づかない）
+    expense_items = relationship("ExpenseItem", back_populates="category")

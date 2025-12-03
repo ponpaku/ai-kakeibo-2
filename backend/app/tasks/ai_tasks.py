@@ -1,6 +1,7 @@
 from app.tasks.celery_app import celery_app
 from app.database import SessionLocal
 from app.models.expense import Expense, ExpenseStatus
+from app.models.expense_item import ExpenseItem, CategorySource
 from app.models.category import Category
 from app.models.ai_settings import AISettings
 from app.services.codex_service import CodexService
@@ -9,20 +10,31 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="classify_expense_task")
-def classify_expense_task(expense_id: int):
+@celery_app.task(name="classify_expense_item_task")
+def classify_expense_item_task(expense_item_id: int):
     """
-    出費のAI分類タスク（Codex exec使用）
+    ExpenseItemのAI分類タスク（Codex exec使用）
 
     Args:
-        expense_id: Expense ID
+        expense_item_id: ExpenseItem ID
     """
     db = SessionLocal()
     try:
-        # Expenseを取得
-        expense = db.query(Expense).filter(Expense.id == expense_id).first()
+        # ExpenseItemを取得
+        expense_item = db.query(ExpenseItem).filter(ExpenseItem.id == expense_item_id).first()
+        if not expense_item:
+            logger.error(f"ExpenseItem not found: {expense_item_id}")
+            return {"success": False, "error": "ExpenseItem not found"}
+
+        # 既にカテゴリが設定されている場合はスキップ
+        if expense_item.category_id is not None:
+            logger.info(f"ExpenseItem {expense_item_id} already has category, skipping")
+            return {"success": True, "skipped": True}
+
+        # 関連するExpenseを取得
+        expense = db.query(Expense).filter(Expense.id == expense_item.expense_id).first()
         if not expense:
-            logger.error(f"Expense not found: {expense_id}")
+            logger.error(f"Expense not found for ExpenseItem: {expense_item_id}")
             return {"success": False, "error": "Expense not found"}
 
         # AI設定を取得
@@ -37,13 +49,7 @@ def classify_expense_task(expense_id: int):
         # 分類が無効の場合はスキップ
         if not ai_settings.classification_enabled:
             logger.info("Classification is disabled in settings")
-            expense.status = ExpenseStatus.COMPLETED
-            db.commit()
             return {"success": False, "error": "Classification is disabled"}
-
-        # 処理中に設定
-        expense.status = ExpenseStatus.PROCESSING
-        db.commit()
 
         # カテゴリ一覧を取得
         categories = db.query(Category).filter(Category.is_active == True).all()
@@ -51,17 +57,15 @@ def classify_expense_task(expense_id: int):
 
         if not category_names:
             logger.warning("No active categories found")
-            expense.status = ExpenseStatus.COMPLETED
-            db.commit()
             return {"success": False, "error": "No active categories"}
 
-        logger.info(f"AI分類処理開始: expense_id={expense_id}, model={ai_settings.classification_model}")
+        logger.info(f"AI分類処理開始: expense_item_id={expense_item_id}, product={expense_item.product_name}, model={ai_settings.classification_model}")
 
         # Codex execで分類実行
         classification_result = CodexService.classify_expense(
-            product_name=expense.product_name or "",
-            store_name=expense.store_name,
-            amount=float(expense.amount) if expense.amount else 0.0,
+            product_name=expense_item.product_name or "",
+            store_name=expense.merchant_name,
+            amount=float(expense_item.line_total) if expense_item.line_total else 0.0,
             note=expense.note,
             categories=category_names,
             model=ai_settings.classification_model,
@@ -71,8 +75,6 @@ def classify_expense_task(expense_id: int):
 
         if not classification_result.get("success"):
             logger.error(f"分類失敗: {classification_result.get('error')}")
-            expense.status = ExpenseStatus.FAILED
-            db.commit()
             return {
                 "success": False,
                 "error": classification_result.get("error")
@@ -82,7 +84,7 @@ def classify_expense_task(expense_id: int):
         category_name = classification_result.get("category")
         confidence = classification_result.get("confidence", 0.0)
 
-        logger.info(f"分類成功: category={category_name}, confidence={confidence}")
+        logger.info(f"分類成功: item_id={expense_item_id}, category={category_name}, confidence={confidence}")
 
         # カテゴリIDを取得
         category_id = None
@@ -93,27 +95,69 @@ def classify_expense_task(expense_id: int):
             else:
                 logger.warning(f"カテゴリが見つかりません: {category_name}")
 
-        # 分類結果を保存
-        expense.category_id = category_id
-        expense.ai_confidence = confidence
-        expense.ai_classification_data = None  # Codex execの出力は保存しない
-        expense.status = ExpenseStatus.COMPLETED
+        # 分類結果をExpenseItemに保存
+        expense_item.category_id = category_id
+        expense_item.category_source = CategorySource.AI
+        expense_item.ai_confidence = confidence
 
         db.commit()
 
+        # Expense内の全ExpenseItemのカテゴリ設定状況を確認
+        all_items = db.query(ExpenseItem).filter(ExpenseItem.expense_id == expense.id).all()
+        uncategorized_count = sum(1 for item in all_items if item.category_id is None)
+
+        # 全てカテゴリ設定済みならExpenseをCOMPLETEDにする
+        if uncategorized_count == 0:
+            expense.status = ExpenseStatus.COMPLETED
+            db.commit()
+            logger.info(f"Expense {expense.id} - 全商品の分類が完了しました")
+        else:
+            logger.info(f"Expense {expense.id} - 残り{uncategorized_count}個の商品が未分類")
+
         return {
             "success": True,
-            "expense_id": expense_id,
+            "expense_item_id": expense_item_id,
+            "expense_id": expense.id,
             "category_id": category_id,
             "category_name": category_name,
-            "confidence": confidence
+            "confidence": confidence,
+            "uncategorized_remaining": uncategorized_count
         }
 
     except Exception as e:
         logger.exception(f"分類処理中にエラーが発生: {str(e)}")
-        if expense:
-            expense.status = ExpenseStatus.FAILED
-            db.commit()
         return {"success": False, "error": str(e)}
+    finally:
+        db.close()
+
+
+# 旧関数の互換性維持（非推奨）
+@celery_app.task(name="classify_expense_task")
+def classify_expense_task(expense_id: int):
+    """
+    （非推奨）後方互換性のためのラッパー
+    全ExpenseItemsを分類する
+    """
+    db = SessionLocal()
+    try:
+        expense = db.query(Expense).filter(Expense.id == expense_id).first()
+        if not expense:
+            return {"success": False, "error": "Expense not found"}
+
+        # 全ExpenseItemsを取得
+        items = db.query(ExpenseItem).filter(ExpenseItem.expense_id == expense_id).all()
+
+        results = []
+        for item in items:
+            if item.category_id is None:
+                # AI分類タスクを起動
+                result = classify_expense_item_task.delay(item.id)
+                results.append(result)
+
+        return {
+            "success": True,
+            "expense_id": expense_id,
+            "tasks_started": len(results)
+        }
     finally:
         db.close()

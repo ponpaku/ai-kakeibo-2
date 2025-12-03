@@ -18,7 +18,6 @@
 - Node.js 18以上
 - MariaDB 10.5以上
 - **Redis 6.0以上（必須）** - バックグラウンドタスク処理に使用
-- Claude CLI
 
 ⚠️ **重要**: Redisはこのアプリケーションの動作に必須です。OCR処理とAI分類をバックグラウンドで実行するために使用されます。
 
@@ -82,7 +81,7 @@ brew services start mariadb
 
 このアプリケーションでは、**Redisは必須**です：
 
-1. **バックグラウンドタスク処理**: YomiToku OCRとClaude AI分類は処理に時間がかかるため、非同期処理が必要です
+1. **バックグラウンドタスク処理**: Codex execによるOCRとAI分類は処理に時間がかかるため、非同期処理が必要です
 2. **ユーザー体験の向上**: 「あとは任せる」機能で即座にレスポンスを返し、裏で処理を継続できます
 3. **システムの安定性**: Celeryを使用した非同期タスクキューにより、Webサーバーに負荷をかけません
 4. **処理の信頼性**: タスクキューにより、処理の失敗時の再試行が可能です
@@ -181,13 +180,6 @@ sudo systemctl restart redis
 brew services restart redis
 ```
 
-### 5. Claude CLI
-
-```bash
-# インストール方法は環境によって異なります
-# 詳細はClaude CLIの公式ドキュメントを参照
-```
-
 ## アプリケーションのセットアップ
 
 ### 1. プロジェクトディレクトリに移動
@@ -256,10 +248,6 @@ ALLOWED_EXTENSIONS=jpg,jpeg,png,webp
 # OCR Configuration
 OCR_MAX_WORKERS=2
 
-# AI Configuration
-CLAUDE_CLI_PATH=claude
-CLAUDE_MODEL=claude-sonnet-4-5-20250929
-
 # Application
 BACKEND_PORT=8000
 FRONTEND_PORT=5173
@@ -292,7 +280,6 @@ python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate.bat
 pip install --upgrade pip  # pipを最新版に更新
 pip install -r requirements.txt
-pip install yomitoku  # OCRライブラリは別途インストール
 cd ..
 ```
 
@@ -300,8 +287,6 @@ cd ..
 - ✅ 最新の安定版パッケージがインストールされます
 - ✅ セキュリティアップデートが適用されます
 - ✅ 将来的なメンテナンスが容易になります
-
-> **📝 注意**: YomiToku（OCRライブラリ）はrequirements.txtではなく、個別に`pip install yomitoku`でインストールしてください。
 
 **Windows版:**
 
@@ -311,11 +296,8 @@ python -m venv venv
 venv\Scripts\activate.bat
 pip install --upgrade pip
 pip install -r requirements.txt
-pip install yomitoku
 cd ..
 ```
-
-> **💡 注意**: 古いバージョンのワンライナーインストール方法は[INSTALL_ONELINER.md](INSTALL_ONELINER.md)に記載されていますが、継続的な運用には推奨されません。最新版対応のためrequirements.txtを使用してください。
 
 ### 6. Node.jsの依存関係インストール
 
@@ -631,30 +613,6 @@ sudo journalctl -u redis -n 50  # 最新50行のログを表示
 
 # Mac
 tail -f /opt/homebrew/var/log/redis.log
-```
-
-### YomiToku OCRエラー
-
-初回実行時、YomiTokuはモデルファイルをダウンロードします。これには時間がかかる場合があります。
-
-エラーが続く場合：
-```bash
-cd backend
-source venv/bin/activate
-pip uninstall yomitoku
-pip install yomitoku
-```
-
-### Claude CLI エラー
-
-Claude CLIが正しくインストールされているか確認：
-```bash
-claude --version
-```
-
-パスが通っていない場合、`.env`ファイルで絶対パスを指定：
-```env
-CLAUDE_CLI_PATH=/path/to/claude
 ```
 
 ### パーミッションエラー（Linux/Mac）

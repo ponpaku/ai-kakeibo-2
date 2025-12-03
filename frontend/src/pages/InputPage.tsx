@@ -25,12 +25,13 @@ export default function InputPage() {
 
   // 手入力用
   const [manualForm, setManualForm] = useState({
-    amount: 0,
-    product_name: '',  // 商品名（必須）
-    store_name: '',  // 店舗名（任意）
+    total_amount: 0,
+    product_name: '',  // 商品名（オプショナル）
+    merchant_name: '',  // 店舗名/加盟店名（任意）
     note: '',  // 備考（任意）
     category_id: undefined as number | undefined,
-    expense_date: new Date().toISOString().split('T')[0],
+    occurred_at: new Date().toISOString().split('T')[0],
+    payment_method: '',  // 支払い方法（任意）
   });
   const [showCalculator, setShowCalculator] = useState(false);
 
@@ -126,7 +127,7 @@ export default function InputPage() {
     try {
       await expenseAPI.createManualExpense({
         ...manualForm,
-        expense_date: new Date(manualForm.expense_date).toISOString(),
+        occurred_at: new Date(manualForm.occurred_at).toISOString(),
       });
       alert('出費を記録しました');
       navigate('/');
@@ -280,30 +281,13 @@ export default function InputPage() {
             <form onSubmit={handleManualSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  商品名 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={manualForm.product_name}
-                  onChange={(e) => setManualForm({ ...manualForm, product_name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="例: キュキュット、洗剤、食材など"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  正式名称でなくても構いません。何を買ったのかが分かればOKです。
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  金額 <span className="text-red-500">*</span>
+                  合計金額 <span className="text-red-500">*</span>
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="number"
-                    value={manualForm.amount || ''}
-                    onChange={(e) => setManualForm({ ...manualForm, amount: parseFloat(e.target.value) || 0 })}
+                    value={manualForm.total_amount || ''}
+                    onChange={(e) => setManualForm({ ...manualForm, total_amount: parseInt(e.target.value) || 0 })}
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     required
                   />
@@ -319,12 +303,41 @@ export default function InputPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  商品名（任意）
+                </label>
+                <input
+                  type="text"
+                  value={manualForm.product_name}
+                  onChange={(e) => setManualForm({ ...manualForm, product_name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="例: キュキュット、洗剤、食材など"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  空欄の場合は店舗名やメモから自動設定されます
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  店舗名/加盟店名（任意）
+                </label>
+                <input
+                  type="text"
+                  value={manualForm.merchant_name}
+                  onChange={(e) => setManualForm({ ...manualForm, merchant_name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="例: セブン-イレブン"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   日付 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
-                  value={manualForm.expense_date}
-                  onChange={(e) => setManualForm({ ...manualForm, expense_date: e.target.value })}
+                  value={manualForm.occurred_at}
+                  onChange={(e) => setManualForm({ ...manualForm, occurred_at: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   required
                 />
@@ -332,15 +345,20 @@ export default function InputPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  店舗名（任意）
+                  支払い方法（任意）
                 </label>
-                <input
-                  type="text"
-                  value={manualForm.store_name}
-                  onChange={(e) => setManualForm({ ...manualForm, store_name: e.target.value })}
+                <select
+                  value={manualForm.payment_method}
+                  onChange={(e) => setManualForm({ ...manualForm, payment_method: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="例: スーパーマーケット"
-                />
+                >
+                  <option value="">未選択</option>
+                  <option value="cash">現金</option>
+                  <option value="credit">クレジットカード</option>
+                  <option value="debit">デビットカード</option>
+                  <option value="e-money">電子マネー</option>
+                  <option value="qr">QRコード決済</option>
+                </select>
               </div>
 
               <div>
@@ -391,7 +409,7 @@ export default function InputPage() {
             <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md">
               <Calculator
                 onCalculate={(value) => {
-                  setManualForm({ ...manualForm, amount: value });
+                  setManualForm({ ...manualForm, total_amount: Math.floor(value) });
                   setShowCalculator(false);
                 }}
               />

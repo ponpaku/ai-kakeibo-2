@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, extract
 from datetime import datetime, timedelta
 from typing import Optional
@@ -7,6 +7,7 @@ from decimal import Decimal
 from app.database import get_db
 from app.models.user import User
 from app.models.expense import Expense
+from app.models.expense_item import ExpenseItem
 from app.models.category import Category
 from app.api.deps import get_current_user
 
@@ -20,58 +21,68 @@ def get_summary(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """サマリー情報を取得"""
+    """サマリー情報を取得（ExpenseItemベース集計）"""
     # デフォルトは今月
     if not start_date:
         start_date = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     if not end_date:
         end_date = datetime.now()
 
-    # 総支出
-    total_expenses = db.query(func.sum(Expense.amount)).filter(
+    # 総支出（ExpenseItemの合計）
+    total_expenses = db.query(func.sum(ExpenseItem.line_total)).join(Expense).filter(
         Expense.user_id == current_user.id,
-        Expense.expense_date >= start_date,
-        Expense.expense_date <= end_date
-    ).scalar() or Decimal(0)
-
-    # 出費件数
-    expense_count = db.query(func.count(Expense.id)).filter(
-        Expense.user_id == current_user.id,
-        Expense.expense_date >= start_date,
-        Expense.expense_date <= end_date
+        Expense.occurred_at >= start_date,
+        Expense.occurred_at <= end_date
     ).scalar() or 0
 
-    # カテゴリ別集計
+    # 出費件数（Expenseの件数）
+    expense_count = db.query(func.count(Expense.id)).filter(
+        Expense.user_id == current_user.id,
+        Expense.occurred_at >= start_date,
+        Expense.occurred_at <= end_date
+    ).scalar() or 0
+
+    # 商品明細数
+    item_count = db.query(func.count(ExpenseItem.id)).join(Expense).filter(
+        Expense.user_id == current_user.id,
+        Expense.occurred_at >= start_date,
+        Expense.occurred_at <= end_date
+    ).scalar() or 0
+
+    # カテゴリ別集計（ExpenseItemベース）
     category_breakdown = db.query(
         Category.id,
         Category.name,
         Category.color,
-        func.sum(Expense.amount).label('total'),
-        func.count(Expense.id).label('count')
-    ).join(Expense, Expense.category_id == Category.id).filter(
+        func.sum(ExpenseItem.line_total).label('total'),
+        func.count(ExpenseItem.id).label('count')
+    ).join(ExpenseItem, ExpenseItem.category_id == Category.id)\
+     .join(Expense, ExpenseItem.expense_id == Expense.id)\
+     .filter(
         Expense.user_id == current_user.id,
-        Expense.expense_date >= start_date,
-        Expense.expense_date <= end_date
+        Expense.occurred_at >= start_date,
+        Expense.occurred_at <= end_date
     ).group_by(Category.id, Category.name, Category.color).all()
 
-    # 日別集計（グラフ用）
+    # 日別集計（グラフ用）- Expenseの日付で、ExpenseItemの合計を集計
     daily_expenses = db.query(
-        func.date(Expense.expense_date).label('date'),
-        func.sum(Expense.amount).label('total')
-    ).filter(
+        func.date(Expense.occurred_at).label('date'),
+        func.sum(ExpenseItem.line_total).label('total')
+    ).join(ExpenseItem, ExpenseItem.expense_id == Expense.id)\
+     .filter(
         Expense.user_id == current_user.id,
-        Expense.expense_date >= start_date,
-        Expense.expense_date <= end_date
-    ).group_by(func.date(Expense.expense_date)).order_by('date').all()
+        Expense.occurred_at >= start_date,
+        Expense.occurred_at <= end_date
+    ).group_by(func.date(Expense.occurred_at)).order_by('date').all()
 
     # 前月比較
     prev_month_start = (start_date - timedelta(days=30)).replace(day=1)
     prev_month_end = start_date - timedelta(days=1)
-    prev_month_total = db.query(func.sum(Expense.amount)).filter(
+    prev_month_total = db.query(func.sum(ExpenseItem.line_total)).join(Expense).filter(
         Expense.user_id == current_user.id,
-        Expense.expense_date >= prev_month_start,
-        Expense.expense_date <= prev_month_end
-    ).scalar() or Decimal(0)
+        Expense.occurred_at >= prev_month_start,
+        Expense.occurred_at <= prev_month_end
+    ).scalar() or 0
 
     change_from_prev = float(total_expenses) - float(prev_month_total)
     change_percent = (change_from_prev / float(prev_month_total) * 100) if prev_month_total > 0 else 0
@@ -79,6 +90,7 @@ def get_summary(
     return {
         "total_expenses": float(total_expenses),
         "expense_count": expense_count,
+        "item_count": item_count,
         "average_expense": float(total_expenses / expense_count) if expense_count > 0 else 0,
         "category_breakdown": [
             {
@@ -119,24 +131,44 @@ def get_recent_expenses(
     """最近の出費を取得"""
     expenses = db.query(Expense).filter(
         Expense.user_id == current_user.id
-    ).order_by(Expense.expense_date.desc()).limit(limit).all()
+    ).options(joinedload(Expense.items))\
+     .order_by(Expense.occurred_at.desc())\
+     .limit(limit)\
+     .all()
+
+    # カテゴリIDのマップを一括取得（N+1問題の回避）
+    category_ids = set()
+    for expense in expenses:
+        if expense.items:
+            first_item = expense.items[0]
+            if first_item.category_id:
+                category_ids.add(first_item.category_id)
+
+    category_map = {}
+    if category_ids:
+        categories = db.query(Category).filter(Category.id.in_(category_ids)).all()
+        category_map = {cat.id: cat.name for cat in categories}
 
     result = []
     for expense in expenses:
+        # ExpenseItemsからカテゴリを取得（最初のItemのカテゴリ）
         category_name = None
-        if expense.category_id:
-            category = db.query(Category).filter(Category.id == expense.category_id).first()
-            if category:
-                category_name = category.name
+        if expense.items:
+            first_item = expense.items[0]
+            if first_item.category_id and first_item.category_id in category_map:
+                category_name = category_map[first_item.category_id]
 
         result.append({
             "id": expense.id,
-            "amount": float(expense.amount),
-            "expense_date": expense.expense_date,
-            "store_name": expense.store_name,
+            "total_amount": float(expense.total_amount),
+            "occurred_at": expense.occurred_at,
+            "merchant_name": expense.merchant_name,
+            "title": expense.title,
             "description": expense.description,
             "category_name": category_name,
-            "status": expense.status
+            "status": expense.status,
+            "item_count": len(expense.items),
+            "receipt": {"id": expense.receipt.id, "file_path": expense.receipt.file_path} if expense.receipt else None
         })
 
     return result
