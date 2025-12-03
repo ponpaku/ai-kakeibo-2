@@ -4,10 +4,11 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import engine, Base, SessionLocal
 from app.api.endpoints import auth, users, categories, expenses, receipts, dashboard, ai_settings
+from app.api.endpoints import category_rules
 import os
 
 # モデルをインポート（テーブル作成のため）
-from app.models import user, category, expense, expense_item, receipt, ai_settings as ai_settings_model
+from app.models import user, category, expense, expense_item, receipt, ai_settings as ai_settings_model, category_rule
 from app.models.user import User
 from app.models.category import Category
 from app.utils.security import get_password_hash
@@ -38,6 +39,7 @@ app.include_router(expenses.router, prefix="/api")
 app.include_router(receipts.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(ai_settings.router, prefix="/api")
+app.include_router(category_rules.router, prefix="/api")
 
 # 静的ファイル（レシート画像）
 if os.path.exists(settings.UPLOAD_DIR):

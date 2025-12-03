@@ -5,6 +5,7 @@ from app.models.expense_item import ExpenseItem, CategorySource
 from app.models.category import Category
 from app.models.ai_settings import AISettings
 from app.services.codex_service import CodexService
+from app.services.category_rule_service import CategoryRuleService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -37,31 +38,73 @@ def classify_expense_item_task(expense_item_id: int):
             logger.error(f"Expense not found for ExpenseItem: {expense_item_id}")
             return {"success": False, "error": "Expense not found"}
 
-        # AI設定を取得
-        ai_settings = db.query(AISettings).first()
-        if not ai_settings:
-            # デフォルト設定を作成
-            ai_settings = AISettings()
-            db.add(ai_settings)
-            db.commit()
-            db.refresh(ai_settings)
-
-        # 分類が無効の場合はスキップ
-        if not ai_settings.classification_enabled:
-            logger.info("Classification is disabled in settings")
-            return {"success": False, "error": "Classification is disabled"}
-
         # カテゴリ一覧を取得
         categories = db.query(Category).filter(Category.is_active == True).all()
         category_names = [cat.name for cat in categories]
+        category_map = {cat.id: cat.name for cat in categories}
 
         if not category_names:
             logger.warning("No active categories found")
             return {"success": False, "error": "No active categories"}
 
-        logger.info(f"AI分類処理開始: expense_item_id={expense_item_id}, product={expense_item.product_name}, model={ai_settings.classification_model}")
+        matched_rule = CategoryRuleService.find_match(
+            db,
+            [
+                expense_item.product_name,
+                expense.merchant_name,
+                expense.note,
+            ],
+        )
 
-        # Codex execで分類実行
+        if matched_rule:
+            expense_item.category_id = matched_rule.category_id
+            expense_item.category_source = CategorySource.RULE
+            expense_item.ai_confidence = matched_rule.confidence
+            db.commit()
+
+            all_items = db.query(ExpenseItem).filter(ExpenseItem.expense_id == expense.id).all()
+            uncategorized_count = sum(1 for item in all_items if item.category_id is None)
+
+            if uncategorized_count == 0:
+                expense.status = ExpenseStatus.COMPLETED
+                db.commit()
+            category_name = category_map.get(matched_rule.category_id)
+            logger.info(
+                "ルールで分類: item_id=%s, category_id=%s, priority=%s",
+                expense_item_id,
+                matched_rule.category_id,
+                matched_rule.priority,
+            )
+
+            return {
+                "success": True,
+                "expense_item_id": expense_item_id,
+                "expense_id": expense.id,
+                "category_id": matched_rule.category_id,
+                "category_name": category_name,
+                "confidence": matched_rule.confidence,
+                "source": CategorySource.RULE.value,
+                "uncategorized_remaining": uncategorized_count,
+            }
+
+        ai_settings = db.query(AISettings).first()
+        if not ai_settings:
+            ai_settings = AISettings()
+            db.add(ai_settings)
+            db.commit()
+            db.refresh(ai_settings)
+
+        if not ai_settings.classification_enabled:
+            logger.info("Classification is disabled in settings")
+            return {"success": False, "error": "Classification is disabled"}
+
+        logger.info(
+            "AI分類処理開始: expense_item_id=%s, product=%s, model=%s",
+            expense_item_id,
+            expense_item.product_name,
+            ai_settings.classification_model,
+        )
+
         classification_result = CodexService.classify_expense(
             product_name=expense_item.product_name or "",
             store_name=expense.merchant_name,
@@ -70,7 +113,8 @@ def classify_expense_item_task(expense_item_id: int):
             categories=category_names,
             model=ai_settings.classification_model,
             sandbox_mode=ai_settings.sandbox_mode,
-            skip_git_repo_check=ai_settings.skip_git_repo_check
+            skip_git_repo_check=ai_settings.skip_git_repo_check,
+            system_prompt=ai_settings.classification_system_prompt,
         )
 
         if not classification_result.get("success"):
@@ -80,13 +124,11 @@ def classify_expense_item_task(expense_item_id: int):
                 "error": classification_result.get("error")
             }
 
-        # 分類結果を取得
         category_name = classification_result.get("category")
         confidence = classification_result.get("confidence", 0.0)
 
         logger.info(f"分類成功: item_id={expense_item_id}, category={category_name}, confidence={confidence}")
 
-        # カテゴリIDを取得
         category_id = None
         if category_name:
             category = db.query(Category).filter(Category.name == category_name).first()
@@ -95,18 +137,15 @@ def classify_expense_item_task(expense_item_id: int):
             else:
                 logger.warning(f"カテゴリが見つかりません: {category_name}")
 
-        # 分類結果をExpenseItemに保存
         expense_item.category_id = category_id
         expense_item.category_source = CategorySource.AI
         expense_item.ai_confidence = confidence
 
         db.commit()
 
-        # Expense内の全ExpenseItemのカテゴリ設定状況を確認
         all_items = db.query(ExpenseItem).filter(ExpenseItem.expense_id == expense.id).all()
         uncategorized_count = sum(1 for item in all_items if item.category_id is None)
 
-        # 全てカテゴリ設定済みならExpenseをCOMPLETEDにする
         if uncategorized_count == 0:
             expense.status = ExpenseStatus.COMPLETED
             db.commit()
@@ -161,3 +200,57 @@ def classify_expense_task(expense_id: int):
         }
     finally:
         db.close()
+        # ルール適用（マッチしたらAIを呼ばずに確定）
+        matched_rule = CategoryRuleService.find_match(
+            db,
+            [
+                expense_item.product_name,
+                expense.merchant_name,
+                expense.note,
+            ],
+        )
+
+        if matched_rule:
+            expense_item.category_id = matched_rule.category_id
+            expense_item.category_source = CategorySource.RULE
+            expense_item.ai_confidence = matched_rule.confidence
+            db.commit()
+
+            all_items = db.query(ExpenseItem).filter(ExpenseItem.expense_id == expense.id).all()
+            uncategorized_count = sum(1 for item in all_items if item.category_id is None)
+
+            if uncategorized_count == 0:
+                expense.status = ExpenseStatus.COMPLETED
+                db.commit()
+            category_name = category_map.get(matched_rule.category_id)
+            logger.info(
+                "ルールで分類: item_id=%s, category_id=%s, priority=%s",
+                expense_item_id,
+                matched_rule.category_id,
+                matched_rule.priority,
+            )
+
+            return {
+                "success": True,
+                "expense_item_id": expense_item_id,
+                "expense_id": expense.id,
+                "category_id": matched_rule.category_id,
+                "category_name": category_name,
+                "confidence": matched_rule.confidence,
+                "source": CategorySource.RULE.value,
+                "uncategorized_remaining": uncategorized_count,
+            }
+
+        # AI設定を取得
+        ai_settings = db.query(AISettings).first()
+        if not ai_settings:
+            # デフォルト設定を作成
+            ai_settings = AISettings()
+            db.add(ai_settings)
+            db.commit()
+            db.refresh(ai_settings)
+
+        # 分類が無効の場合はスキップ
+        if not ai_settings.classification_enabled:
+            logger.info("Classification is disabled in settings")
+            return {"success": False, "error": "Classification is disabled"}

@@ -34,6 +34,19 @@ export interface ExpenseItem {
   category_name?: string;
 }
 
+export type CategoryRuleMatchType = 'contains' | 'regex';
+
+export interface CategoryRule {
+  id: number;
+  name?: string;
+  pattern: string;
+  match_type: CategoryRuleMatchType;
+  category_id: number;
+  confidence: number;
+  priority: number;
+  is_active: boolean;
+}
+
 // Expense（決済ヘッダ）
 export interface Expense {
   id: number;
@@ -53,6 +66,12 @@ export interface Expense {
   note?: string;  // 備考
   status: 'pending' | 'processing' | 'completed' | 'failed';
   ai_confidence?: number;
+  product_name?: string;
+  amount?: number;
+  store_name?: string;
+  category_id?: number;
+  expense_date?: string;
+  ocr_raw_text?: string;
   created_at: string;
   updated_at?: string;
   receipt?: Receipt;
