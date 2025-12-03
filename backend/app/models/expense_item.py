@@ -46,7 +46,7 @@ class ExpenseItem(Base):
 
     # リレーション
     expense = relationship("Expense", back_populates="items")
-    category = relationship("Category")
+    category = relationship("Category", back_populates="expense_items")
 
     # 複合インデックス
     __table_args__ = (
