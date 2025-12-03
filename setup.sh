@@ -123,8 +123,13 @@ if [ ! -f ".env" ]; then
         print_warning "重要: .envファイルを編集して以下の項目を設定してください:"
         echo "  - DB_USER: MariaDBのユーザー名"
         echo "  - DB_PASSWORD: MariaDBのパスワード"
+        echo "  - DB_NAME: データベース名（デフォルト: ai_kakeibo）"
         echo "  - SECRET_KEY: ランダムな文字列（以下のコマンドで生成可能）"
         echo "      python3 -c \"import secrets; print(secrets.token_urlsafe(32))\""
+        echo ""
+        print_warning "セットアップを続行する前に、.envファイルを編集してください"
+        print_info ".envファイルの編集が完了したら、Enterキーを押してください..."
+        read -r
     else
         print_error ".env.exampleファイルが見つかりません"
         exit 1
@@ -133,22 +138,47 @@ else
     print_success ".envファイルは既に存在します"
 fi
 
-# データベースの作成（オプション）
-echo ""
-print_info "データベースを作成しますか? (y/n)"
-print_warning "既に作成済みの場合は 'n' を選択してください"
-read -r create_db
+# .envファイルから設定を読み込む
+if [ -f ".env" ]; then
+    export $(cat .env | grep -v '^#' | grep -v '^$' | xargs)
+    print_info "設定を読み込みました: DB_NAME=${DB_NAME}, DB_USER=${DB_USER}"
+fi
 
-if [ "$create_db" == "y" ]; then
-    print_info "MariaDBのrootパスワードを入力してください:"
-    mysql -u root -p <<EOF
-CREATE DATABASE IF NOT EXISTS ai_kakeibo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-SHOW DATABASES LIKE 'ai_kakeibo';
-EOF
-    if [ $? -eq 0 ]; then
-        print_success "データベース 'ai_kakeibo' を作成しました"
+# データベースの存在確認（オプション）
+echo ""
+print_info "データベースの接続確認を行いますか? (y/n)"
+print_warning "スキップする場合は 'n' を選択してください"
+read -r check_db
+
+if [ "$check_db" == "y" ]; then
+    print_info "データベース '${DB_NAME}' の存在を確認中..."
+
+    # データベースの存在確認
+    if mysql -u "${DB_USER}" -p"${DB_PASSWORD}" -e "USE ${DB_NAME};" 2>/dev/null; then
+        print_success "データベース '${DB_NAME}' に接続できました"
     else
-        print_error "データベースの作成に失敗しました"
+        print_warning "データベース '${DB_NAME}' に接続できませんでした"
+        print_info "データベースを作成しますか? (y/n)"
+        read -r create_db
+
+        if [ "$create_db" == "y" ]; then
+            print_info "MariaDBのrootパスワードを入力してください:"
+            mysql -u root -p <<EOF
+CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
+FLUSH PRIVILEGES;
+SHOW DATABASES LIKE '${DB_NAME}';
+EOF
+            if [ $? -eq 0 ]; then
+                print_success "データベース '${DB_NAME}' を作成し、ユーザー '${DB_USER}' に権限を付与しました"
+            else
+                print_error "データベースの作成に失敗しました"
+                print_warning "手動でデータベースを作成してください:"
+                echo "  sudo mysql -u root -p"
+                echo "  CREATE DATABASE ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+                echo "  GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';"
+            fi
+        fi
     fi
 fi
 
