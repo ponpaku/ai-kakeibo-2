@@ -233,19 +233,24 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
             if expense_item.category_id is None:
                 uncategorized_item_ids.append(expense_item.id)
 
-        # ステータス決定: 全てカテゴリ設定済みならCOMPLETED、未設定があればPROCESSING
+        # ステータス決定: 全てカテゴリ設定済みならCOMPLETED。
+        # 未設定がある場合はAI分類の実行可否に応じてPROCESSING/PENDINGを設定する。
+        should_queue_ai = not skip_ai and ai_settings.classification_enabled
+
         if uncategorized_item_ids:
-            expense.status = ExpenseStatus.PROCESSING
+            expense.status = ExpenseStatus.PROCESSING if should_queue_ai else ExpenseStatus.PENDING
         else:
             expense.status = ExpenseStatus.COMPLETED
 
         db.commit()
 
-        # AI分類タスクを実行（skip_aiがFalseかつカテゴリ未設定の商品がある場合）
-        if not skip_ai and uncategorized_item_ids:
+        # AI分類タスクを実行（設定で有効かつカテゴリ未設定の商品がある場合）
+        if should_queue_ai and uncategorized_item_ids:
             logger.info(f"AI分類タスクを開始: {len(uncategorized_item_ids)}個の商品")
             for item_id in uncategorized_item_ids:
                 classify_expense_item_task.delay(item_id)
+        elif uncategorized_item_ids:
+            logger.info("AI分類が無効のため、未分類のまま保留します")
 
         return {
             "success": True,
