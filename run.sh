@@ -119,6 +119,69 @@ else
 fi
 cd ..
 
+# 初期ユーザーの確認と作成
+echo -e "${GREEN}初期ユーザーの確認をしています...${NC}"
+cd backend
+source venv/bin/activate
+python -c "
+from app.database import SessionLocal
+from app.models.user import User
+from app.models.category import Category
+from app.utils.security import get_password_hash
+
+db = SessionLocal()
+
+try:
+    # ユーザーが存在するか確認
+    user_count = db.query(User).count()
+
+    if user_count == 0:
+        print('ユーザーが存在しません。初期管理者ユーザーを作成します...')
+
+        # 管理者ユーザーを作成
+        admin = User(
+            username='admin',
+            email='admin@example.com',
+            full_name='管理者',
+            hashed_password=get_password_hash('admin123'),
+            is_admin=True,
+            is_active=True
+        )
+        db.add(admin)
+
+        # カテゴリも確認して必要なら作成
+        category_count = db.query(Category).count()
+        if category_count == 0:
+            print('カテゴリも作成します...')
+            categories = [
+                Category(name='食費', description='食材、外食など', color='#EF4444', icon='shopping-cart', sort_order=1),
+                Category(name='日用品', description='生活必需品', color='#F59E0B', icon='home', sort_order=2),
+                Category(name='交通費', description='電車、バス、ガソリン代', color='#10B981', icon='car', sort_order=3),
+                Category(name='娯楽', description='趣味、レジャー', color='#3B82F6', icon='music', sort_order=4),
+                Category(name='医療費', description='病院、薬代', color='#8B5CF6', icon='heart', sort_order=5),
+                Category(name='光熱費', description='電気、ガス、水道', color='#EC4899', icon='zap', sort_order=6),
+                Category(name='通信費', description='スマホ、インターネット', color='#06B6D4', icon='smartphone', sort_order=7),
+                Category(name='その他', description='その他の支出', color='#6B7280', icon='more-horizontal', sort_order=99),
+            ]
+            for cat in categories:
+                db.add(cat)
+
+        db.commit()
+        print('初期ユーザーとカテゴリを作成しました')
+        print('ユーザー名: admin')
+        print('パスワード: admin123')
+        print('※初回ログイン後、必ずパスワードを変更してください！')
+    else:
+        print(f'ユーザーが{user_count}件存在します。初期化をスキップします。')
+
+except Exception as e:
+    print(f'エラー: {e}')
+    db.rollback()
+finally:
+    db.close()
+" || echo -e "${YELLOW}初期ユーザー確認でエラーが発生しましたが、続行します${NC}"
+cd ..
+
 # バックエンドサーバーの起動
 echo -e "${GREEN}バックエンドサーバーを起動しています...${NC}"
 cd backend

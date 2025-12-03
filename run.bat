@@ -55,6 +55,13 @@ echo.
 echo 準備ができたらEnterキーを押してください...
 pause >nul
 
+REM 初期ユーザーの確認と作成
+echo 初期ユーザーの確認をしています...
+cd backend
+call venv\Scripts\activate.bat
+python -c "from app.database import SessionLocal; from app.models.user import User; from app.models.category import Category; from app.utils.security import get_password_hash; db = SessionLocal(); user_count = db.query(User).count(); print(f'ユーザー: {user_count}件'); admin = User(username='admin', email='admin@example.com', full_name='管理者', hashed_password=get_password_hash('admin123'), is_admin=True, is_active=True) if user_count == 0 else None; db.add(admin) if admin else None; [db.add(Category(name=n, description=d, color=c, icon=i, sort_order=s)) for n, d, c, i, s in [('食費', '食材、外食など', '#EF4444', 'shopping-cart', 1), ('日用品', '生活必需品', '#F59E0B', 'home', 2), ('交通費', '電車、バス、ガソリン代', '#10B981', 'car', 3), ('娯楽', '趣味、レジャー', '#3B82F6', 'music', 4), ('医療費', '病院、薬代', '#8B5CF6', 'heart', 5), ('光熱費', '電気、ガス、水道', '#EC4899', 'zap', 6), ('通信費', 'スマホ、インターネット', '#06B6D4', 'smartphone', 7), ('その他', 'その他の支出', '#6B7280', 'more-horizontal', 99)]] if user_count == 0 and db.query(Category).count() == 0 else None; db.commit() if user_count == 0 else None; print('初期ユーザーとカテゴリを作成しました (admin/admin123)') if user_count == 0 else print('初期化をスキップします'); db.close()"
+cd ..
+
 REM 新しいコマンドプロンプトウィンドウでバックエンドサーバーを起動
 echo バックエンドサーバーを起動しています...
 start "AI家計簿 - バックエンド" cmd /k "cd backend && venv\Scripts\activate.bat && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
