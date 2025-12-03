@@ -140,8 +140,21 @@ fi
 
 # .envファイルから設定を読み込む
 if [ -f ".env" ]; then
-    export $(cat .env | grep -v '^#' | grep -v '^$' | xargs)
-    print_info "設定を読み込みました: DB_NAME=${DB_NAME}, DB_USER=${DB_USER}"
+    print_info ".envファイルから設定を読み込み中..."
+    # set -a: 以降の変数を自動的にエクスポート
+    # source .env: .envファイルを読み込み
+    # set +a: 自動エクスポートを無効化
+    set -a
+    source .env
+    set +a
+    print_info "設定を読み込みました:"
+    echo "  DB_NAME: ${DB_NAME}"
+    echo "  DB_USER: ${DB_USER}"
+    echo "  DB_HOST: ${DB_HOST}"
+    echo "  DB_PORT: ${DB_PORT}"
+else
+    print_error ".envファイルが見つかりません"
+    exit 1
 fi
 
 # データベースの存在確認（オプション）
@@ -154,18 +167,25 @@ if [ "$check_db" == "y" ]; then
     print_info "データベース '${DB_NAME}' の存在を確認中..."
 
     # データベースの存在確認
-    if mysql -u "${DB_USER}" -p"${DB_PASSWORD}" -e "USE ${DB_NAME};" 2>/dev/null; then
+    # MYSQL_PWD環境変数を使用してパスワードを渡す（セキュアな方法）
+    if MYSQL_PWD="${DB_PASSWORD}" mysql -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_USER}" -e "USE \`${DB_NAME}\`;" 2>/dev/null; then
         print_success "データベース '${DB_NAME}' に接続できました"
     else
         print_warning "データベース '${DB_NAME}' に接続できませんでした"
+        print_info "接続情報を確認してください:"
+        echo "  ホスト: ${DB_HOST}:${DB_PORT}"
+        echo "  ユーザー: ${DB_USER}"
+        echo "  データベース: ${DB_NAME}"
+        echo ""
         print_info "データベースを作成しますか? (y/n)"
         read -r create_db
 
         if [ "$create_db" == "y" ]; then
             print_info "MariaDBのrootパスワードを入力してください:"
-            mysql -u root -p <<EOF
-CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
+            mysql -h "${DB_HOST}" -P "${DB_PORT}" -u root -p <<EOF
+CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';
 FLUSH PRIVILEGES;
 SHOW DATABASES LIKE '${DB_NAME}';
 EOF
@@ -175,8 +195,10 @@ EOF
                 print_error "データベースの作成に失敗しました"
                 print_warning "手動でデータベースを作成してください:"
                 echo "  sudo mysql -u root -p"
-                echo "  CREATE DATABASE ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-                echo "  GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';"
+                echo "  CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+                echo "  CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY 'your_password';"
+                echo "  GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';"
+                echo "  FLUSH PRIVILEGES;"
             fi
         fi
     fi
