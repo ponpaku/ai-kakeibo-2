@@ -12,6 +12,17 @@ class CodexService:
     """Codex exec を使用したOCRと分類サービス"""
 
     @staticmethod
+    def _fallback_category(categories: List[str]) -> Optional[str]:
+        if not categories:
+            return None
+
+        for candidate in ["その他", "その他 "]:
+            if candidate in categories:
+                return candidate
+
+        return categories[0]
+
+    @staticmethod
     def get_receipt_schema(categories: List[str]) -> Dict:
         """
         レシートOCR用のJSON Schemaを生成
@@ -219,6 +230,18 @@ class CodexService:
                 logger.error(f"Output: {output}")
                 raise Exception(f"JSONパースエラー: {str(e)}")
 
+            fallback_category = CodexService._fallback_category(categories)
+            items = data.get("items") if isinstance(data, dict) else None
+            if isinstance(items, list):
+                for item in items:
+                    if not isinstance(item, dict):
+                        continue
+
+                    category = item.get("category")
+                    if not isinstance(category, str) or category not in categories:
+                        logger.warning("OCRアイテムのカテゴリがスキーマに一致しないためフォールバックします")
+                        item["category"] = fallback_category
+
             logger.info(f"OCR成功: store={data.get('store')}, items={len(data.get('items', []))}")
 
             return {
@@ -374,8 +397,21 @@ class CodexService:
                 logger.error(f"Output: {output}")
                 raise Exception(f"JSONパースエラー: {str(e)}")
 
+            fallback_category = CodexService._fallback_category(categories)
             category = data.get("category")
             confidence = data.get("confidence", 0.0)
+
+            if not isinstance(category, str) or category not in categories:
+                logger.warning("カテゴリがスキーマに一致しないためフォールバックします")
+                category = fallback_category
+                confidence = 0.0
+
+            if not isinstance(confidence, (int, float)):
+                logger.warning("confidenceが数値ではないため0.0にリセットします")
+                confidence = 0.0
+
+            if fallback_category and category == fallback_category and confidence > 0.3:
+                confidence = 0.3
 
             logger.info(f"分類成功: category={category}, confidence={confidence}")
 
