@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Category, Expense, DashboardSummary, LoginResponse, AISettings, AISettingsUpdate } from '@/types';
+import type { User, Category, Expense, DashboardSummary, LoginResponse, AISettings, AISettingsUpdate, CategoryRule } from '@/types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -188,6 +188,29 @@ export const aiSettingsAPI = {
   },
   updateSettings: async (data: AISettingsUpdate): Promise<AISettings> => {
     const response = await api.put<AISettings>('/ai-settings/', data);
+    return response.data;
+  },
+};
+
+// カテゴリルールAPI
+export const categoryRuleAPI = {
+  listRules: async (): Promise<CategoryRule[]> => {
+    const response = await api.get<CategoryRule[]>('/category-rules/');
+    return response.data;
+  },
+  createRule: async (data: Omit<CategoryRule, 'id'>): Promise<CategoryRule> => {
+    const response = await api.post<CategoryRule>('/category-rules/', data);
+    return response.data;
+  },
+  updateRule: async (ruleId: number, data: Partial<Omit<CategoryRule, 'id'>>): Promise<CategoryRule> => {
+    const response = await api.put<CategoryRule>(`/category-rules/${ruleId}`, data);
+    return response.data;
+  },
+  deleteRule: async (ruleId: number): Promise<void> => {
+    await api.delete(`/category-rules/${ruleId}`);
+  },
+  testRule: async (text: string): Promise<{ matched: boolean; rule?: CategoryRule; category_name?: string }> => {
+    const response = await api.post('/category-rules/test', { text });
     return response.data;
   },
 };

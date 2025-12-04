@@ -86,7 +86,7 @@ export default function InputPage() {
           try {
             const expense = await expenseAPI.getExpense(expenseId);
 
-            if (expense.status === 'processed' || expense.status === 'completed' || expense.ocr_raw_text) {
+            if (expense.status === 'processing' || expense.status === 'completed' || expense.ocr_raw_text) {
               // OCR完了
               clearInterval(pollInterval);
               setProcessingStatus({ show: false, stage: 'uploading', canLeave: false });

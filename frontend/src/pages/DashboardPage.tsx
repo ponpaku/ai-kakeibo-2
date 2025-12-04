@@ -3,14 +3,13 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import Layout from '@/components/common/Layout';
 import Loading from '@/components/common/Loading';
 import ExpenseList from '@/components/Dashboard/ExpenseList';
-import { dashboardAPI, expenseAPI, receiptAPI, categoryAPI } from '@/services/api';
-import type { DashboardSummary, Expense, Category } from '@/types';
+import { dashboardAPI, expenseAPI, receiptAPI } from '@/services/api';
+import type { DashboardSummary, Expense } from '@/types';
 import { TrendingUp, TrendingDown, DollarSign, ShoppingBag } from 'lucide-react';
 
 export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [recentExpenses, setRecentExpenses] = useState<Expense[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedReceipt, setSelectedReceipt] = useState<number | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -25,7 +24,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadData();
-    loadCategories();
   }, []);
 
   const loadData = async () => {
@@ -40,15 +38,6 @@ export default function DashboardPage() {
       console.error('データの読み込みに失敗しました:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadCategories = async () => {
-    try {
-      const data = await categoryAPI.listCategories();
-      setCategories(data);
-    } catch (error) {
-      console.error('カテゴリの読み込みに失敗しました:', error);
     }
   };
 

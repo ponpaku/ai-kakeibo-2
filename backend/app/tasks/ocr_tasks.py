@@ -10,6 +10,7 @@ from app.services.codex_service import CodexService
 from app.services.image_service import ImageService
 from app.tasks.ai_tasks import classify_expense_item_task
 from app.constants import OCR_SCHEMA_VERSION
+from app.services.category_rule_service import CategoryRuleService
 import logging
 import json
 
@@ -76,7 +77,8 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
             categories=category_names,
             model=ai_settings.ocr_model,
             sandbox_mode=ai_settings.sandbox_mode,
-            skip_git_repo_check=ai_settings.skip_git_repo_check
+            skip_git_repo_check=ai_settings.skip_git_repo_check,
+            system_prompt=ai_settings.ocr_system_prompt,
         )
 
         if not ocr_result.get("success"):
@@ -155,10 +157,24 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
                 category_name = item_data.get("category")
                 category_id = None
                 category_source = None
+                ai_confidence = None
 
                 if category_name and category_name in category_map:
                     category_id = category_map[category_name]
                     category_source = CategorySource.OCR
+                else:
+                    matched_rule = CategoryRuleService.find_match(
+                        db,
+                        [
+                            product_name,
+                            expense.merchant_name,
+                            expense.note,
+                        ],
+                    )
+                    if matched_rule:
+                        category_id = matched_rule.category_id
+                        category_source = CategorySource.RULE
+                        ai_confidence = matched_rule.confidence
 
                 # ExpenseItem作成
                 expense_item = ExpenseItem(
@@ -170,6 +186,7 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
                     line_total=line_total,
                     category_id=category_id,
                     category_source=category_source,
+                    ai_confidence=ai_confidence,
                     raw=json.dumps(item_data, ensure_ascii=False)
                 )
                 db.add(expense_item)
@@ -184,31 +201,56 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
                 expense.total_amount = sum(item.get("line_total", 0) or 0 for item in items)
         else:
             # 商品がない場合でも最低1つのExpenseItemを作成
+            fallback_product_name = expense.title or "レシート購入品"
+            fallback_category_id = None
+            fallback_category_source = None
+            fallback_confidence = None
+
+            matched_rule = CategoryRuleService.find_match(
+                db,
+                [
+                    fallback_product_name,
+                    expense.merchant_name,
+                    expense.note,
+                ],
+            )
+            if matched_rule:
+                fallback_category_id = matched_rule.category_id
+                fallback_category_source = CategorySource.RULE
+                fallback_confidence = matched_rule.confidence
+
             expense_item = ExpenseItem(
                 expense_id=expense_id,
                 position=0,
-                product_name=expense.title or "レシート購入品",
+                product_name=fallback_product_name,
                 line_total=expense.total_amount or 0,
-                category_id=None,
-                category_source=None
+                category_id=fallback_category_id,
+                category_source=fallback_category_source,
+                ai_confidence=fallback_confidence
             )
             db.add(expense_item)
             db.flush()
-            uncategorized_item_ids.append(expense_item.id)
+            if expense_item.category_id is None:
+                uncategorized_item_ids.append(expense_item.id)
 
-        # ステータス決定: 全てカテゴリ設定済みならCOMPLETED、未設定があればPROCESSING
+        # ステータス決定: 全てカテゴリ設定済みならCOMPLETED。
+        # 未設定がある場合はAI分類の実行可否に応じてPROCESSING/PENDINGを設定する。
+        should_queue_ai = not skip_ai and ai_settings.classification_enabled
+
         if uncategorized_item_ids:
-            expense.status = ExpenseStatus.PROCESSING
+            expense.status = ExpenseStatus.PROCESSING if should_queue_ai else ExpenseStatus.PENDING
         else:
             expense.status = ExpenseStatus.COMPLETED
 
         db.commit()
 
-        # AI分類タスクを実行（skip_aiがFalseかつカテゴリ未設定の商品がある場合）
-        if not skip_ai and uncategorized_item_ids:
+        # AI分類タスクを実行（設定で有効かつカテゴリ未設定の商品がある場合）
+        if should_queue_ai and uncategorized_item_ids:
             logger.info(f"AI分類タスクを開始: {len(uncategorized_item_ids)}個の商品")
             for item_id in uncategorized_item_ids:
                 classify_expense_item_task.delay(item_id)
+        elif uncategorized_item_ids:
+            logger.info("AI分類が無効のため、未分類のまま保留します")
 
         return {
             "success": True,
