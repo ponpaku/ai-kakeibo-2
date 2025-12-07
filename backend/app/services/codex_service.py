@@ -205,7 +205,9 @@ class CodexService:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=180  # 3分タイムアウト
+                timeout=180,  # 3分タイムアウト
+                shell=False,  # セキュリティのため明示的に指定
+                check=False   # return codeを手動でチェック
             )
 
             logger.debug(f"Return code: {result.returncode}")
@@ -372,7 +374,9 @@ class CodexService:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=60  # 1分タイムアウト
+                timeout=60,  # 1分タイムアウト
+                shell=False,  # セキュリティのため明示的に指定
+                check=False   # return codeを手動でチェック
             )
 
             logger.debug(f"Return code: {result.returncode}")

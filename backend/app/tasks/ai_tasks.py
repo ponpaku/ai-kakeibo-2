@@ -165,6 +165,7 @@ def classify_expense_item_task(expense_item_id: int):
 
     except Exception as e:
         logger.exception(f"分類処理中にエラーが発生: {str(e)}")
+        db.rollback()  # 明示的にロールバック
         return {"success": False, "error": str(e)}
     finally:
         db.close()

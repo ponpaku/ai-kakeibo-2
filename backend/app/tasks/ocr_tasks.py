@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from datetime import datetime as dt
 from app.tasks.celery_app import celery_app
 from app.database import SessionLocal
 from app.models.expense import Expense, ExpenseStatus
@@ -105,7 +106,6 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
         # 日付
         if data.get("date"):
             try:
-                from datetime import datetime as dt
                 date_str = data["date"]
                 for fmt in ["%Y/%m/%d", "%Y-%m-%d", "%Y年%m月%d日"]:
                     try:
@@ -262,9 +262,14 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
 
     except Exception as e:
         logger.exception(f"OCR処理中にエラーが発生: {str(e)}")
-        if expense:
-            expense.status = ExpenseStatus.FAILED
-            db.commit()
+        db.rollback()  # 明示的にロールバック
+        try:
+            if expense:
+                expense.status = ExpenseStatus.FAILED
+                db.commit()
+        except Exception as commit_error:
+            logger.error(f"エラー状態の保存に失敗: {str(commit_error)}")
+            db.rollback()
         return {"success": False, "error": str(e)}
     finally:
         db.close()

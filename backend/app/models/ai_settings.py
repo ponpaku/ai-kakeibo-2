@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database import Base
 
 
@@ -26,8 +26,8 @@ class AISettings(Base):
     classification_system_prompt = Column(Text, nullable=True)
 
     # メタデータ
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def __repr__(self):
         return f"<AISettings(ocr_model={self.ocr_model}, classification_model={self.classification_model})>"
