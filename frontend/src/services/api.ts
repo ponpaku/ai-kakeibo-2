@@ -138,6 +138,10 @@ export const expenseAPI = {
   reclassify: async (expenseId: number): Promise<void> => {
     await api.post(`/expenses/${expenseId}/reclassify`);
   },
+  updateExpenseItem: async (expenseId: number, itemId: number, data: any): Promise<any> => {
+    const response = await api.put(`/expenses/${expenseId}/items/${itemId}`, data);
+    return response.data;
+  },
 };
 
 // レシートAPI

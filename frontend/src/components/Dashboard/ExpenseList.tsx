@@ -60,10 +60,13 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onViewReceipt 
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {expenses.map((expense) => {
-              // 最初のItemのカテゴリを表示
-              const firstItemCategory = expense.items && expense.items.length > 0
-                ? expense.items[0].category_name
-                : null;
+              // すべてのアイテムのカテゴリを取得してユニークなリストを作成
+              const categoryNames = expense.items && expense.items.length > 0
+                ? [...new Set(expense.items.map(item => item.category_name).filter(Boolean))]
+                : [];
+              const categoryDisplay = categoryNames.length > 0
+                ? categoryNames.join(', ')
+                : '未分類';
 
               return (
                 <tr key={expense.id} className="hover:bg-gray-50">
@@ -77,10 +80,7 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onViewReceipt 
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {firstItemCategory || '未分類'}
-                    {expense.items && expense.items.length > 1 && (
-                      <span className="text-xs text-gray-500"> 他</span>
-                    )}
+                    {categoryDisplay}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
                     ¥{expense.total_amount.toLocaleString()}
