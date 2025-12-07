@@ -42,7 +42,7 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onViewReceipt 
                 日付
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                店舗名
+                タイトル
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 カテゴリ
@@ -60,10 +60,13 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onViewReceipt 
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {expenses.map((expense) => {
-              // 最初のItemのカテゴリを表示
-              const firstItemCategory = expense.items && expense.items.length > 0
-                ? expense.items[0].category_name
-                : null;
+              // 全アイテムのカテゴリを重複なしで取得
+              const categoryNames = expense.items && expense.items.length > 0
+                ? [...new Set(expense.items
+                    .map(item => item.category_name)
+                    .filter((name): name is string => name !== null && name !== undefined)
+                  )]
+                : [];
 
               return (
                 <tr key={expense.id} className="hover:bg-gray-50">
@@ -73,14 +76,11 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onViewReceipt 
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div>{expense.title || expense.merchant_name || '-'}</div>
                     {expense.items && expense.items.length > 1 && (
-                      <div className="text-xs text-gray-500">他{expense.items.length - 1}件</div>
+                      <div className="text-xs text-gray-500">({expense.items.length}件の商品)</div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {firstItemCategory || '未分類'}
-                    {expense.items && expense.items.length > 1 && (
-                      <span className="text-xs text-gray-500"> 他</span>
-                    )}
+                    {categoryNames.length > 0 ? categoryNames.join(', ') : '未分類'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
                     ¥{expense.total_amount.toLocaleString()}

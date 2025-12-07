@@ -15,7 +15,9 @@ from app.schemas.expense import (
     ExpenseWithReceipt,
     ExpenseListResponse,
     ManualExpenseCreate,
-    ExpenseItemWithCategory
+    ExpenseItemWithCategory,
+    ExpenseItemUpdate,
+    ExpenseItem as ExpenseItemSchema
 )
 from app.api.deps import get_current_user
 from app.tasks.ai_tasks import classify_expense_task, classify_expense_item_task
@@ -256,3 +258,45 @@ def reclassify_expense(
     db.commit()
 
     return {"message": f"{len(items)}個の商品の再分類を開始しました"}
+
+
+@router.put("/{expense_id}/items/{item_id}", response_model=ExpenseItemSchema)
+def update_expense_item(
+    expense_id: int,
+    item_id: int,
+    item_in: ExpenseItemUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """出費アイテム（商品明細）を更新"""
+    # まずExpenseが存在し、ユーザーのものか確認
+    expense = db.query(Expense).filter(
+        Expense.id == expense_id,
+        Expense.user_id == current_user.id
+    ).first()
+
+    if not expense:
+        raise HTTPException(status_code=404, detail="出費が見つかりません")
+
+    # ExpenseItemを取得
+    item = db.query(ExpenseItem).filter(
+        ExpenseItem.id == item_id,
+        ExpenseItem.expense_id == expense_id
+    ).first()
+
+    if not item:
+        raise HTTPException(status_code=404, detail="商品明細が見つかりません")
+
+    update_data = item_in.model_dump(exclude_unset=True)
+
+    # カテゴリIDが更新される場合、ソースをmanualに設定
+    if 'category_id' in update_data:
+        item.category_source = CategorySource.MANUAL
+        item.ai_confidence = None
+
+    for field, value in update_data.items():
+        setattr(item, field, value)
+
+    db.commit()
+    db.refresh(item)
+    return item

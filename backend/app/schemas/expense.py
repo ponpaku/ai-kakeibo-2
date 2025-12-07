@@ -32,6 +32,15 @@ class ExpenseItemWithCategory(ExpenseItem):
     category_name: Optional[str] = None
 
 
+class ExpenseItemUpdate(BaseModel):
+    """ExpenseItem更新用スキーマ"""
+    product_name: Optional[str] = None
+    quantity: Optional[Decimal] = None
+    unit_price: Optional[int] = None
+    line_total: Optional[int] = None
+    category_id: Optional[int] = None
+
+
 # Expense（決済ヘッダ）スキーマ
 class ExpenseBase(BaseModel):
     occurred_at: datetime  # 発生日時

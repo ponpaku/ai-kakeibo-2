@@ -3,9 +3,16 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import Layout from '@/components/common/Layout';
 import Loading from '@/components/common/Loading';
 import ExpenseList from '@/components/Dashboard/ExpenseList';
-import { dashboardAPI, expenseAPI, receiptAPI } from '@/services/api';
-import type { DashboardSummary, Expense } from '@/types';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingBag } from 'lucide-react';
+import { dashboardAPI, expenseAPI, receiptAPI, categoryAPI } from '@/services/api';
+import type { DashboardSummary, Expense, Category } from '@/types';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, ChevronDown, ChevronUp } from 'lucide-react';
+
+interface EditItemForm {
+  id: number;
+  product_name: string;
+  line_total: number;
+  category_id: number | null;
+}
 
 export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -13,6 +20,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [selectedReceipt, setSelectedReceipt] = useState<number | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [showItemsSection, setShowItemsSection] = useState(true);
   const [editForm, setEditForm] = useState({
     title: '',
     total_amount: 0,
@@ -21,9 +30,11 @@ export default function DashboardPage() {
     note: '',
     payment_method: '',
   });
+  const [editItemsForm, setEditItemsForm] = useState<EditItemForm[]>([]);
 
   useEffect(() => {
     loadData();
+    loadCategories();
   }, []);
 
   const loadData = async () => {
@@ -41,6 +52,15 @@ export default function DashboardPage() {
     }
   };
 
+  const loadCategories = async () => {
+    try {
+      const categoriesData = await categoryAPI.listCategories();
+      setCategories(categoriesData);
+    } catch (error) {
+      console.error('カテゴリの読み込みに失敗しました:', error);
+    }
+  };
+
   const handleEditExpense = (expense: Expense) => {
     setEditingExpense(expense);
     setEditForm({
@@ -51,6 +71,18 @@ export default function DashboardPage() {
       note: expense.note || '',
       payment_method: expense.payment_method || '',
     });
+    // items フォームを初期化
+    if (expense.items && expense.items.length > 0) {
+      setEditItemsForm(expense.items.map(item => ({
+        id: item.id,
+        product_name: item.product_name,
+        line_total: item.line_total,
+        category_id: item.category_id ?? null,
+      })));
+    } else {
+      setEditItemsForm([]);
+    }
+    setShowItemsSection(true);
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -58,13 +90,41 @@ export default function DashboardPage() {
     if (!editingExpense) return;
 
     try {
+      // Expense本体の更新
       await expenseAPI.updateExpense(editingExpense.id, editForm);
+
+      // 各ExpenseItemの更新
+      for (const itemForm of editItemsForm) {
+        const originalItem = editingExpense.items?.find(i => i.id === itemForm.id);
+        if (originalItem) {
+          // 変更があったかチェック
+          const hasChanges =
+            originalItem.product_name !== itemForm.product_name ||
+            originalItem.line_total !== itemForm.line_total ||
+            (originalItem.category_id ?? null) !== itemForm.category_id;
+
+          if (hasChanges) {
+            await expenseAPI.updateExpenseItem(editingExpense.id, itemForm.id, {
+              product_name: itemForm.product_name,
+              line_total: itemForm.line_total,
+              category_id: itemForm.category_id,
+            });
+          }
+        }
+      }
+
       setEditingExpense(null);
       loadData();
     } catch (error) {
       console.error('更新に失敗しました:', error);
       alert('更新に失敗しました');
     }
+  };
+
+  const handleItemFormChange = (itemId: number, field: keyof EditItemForm, value: string | number | null) => {
+    setEditItemsForm(prev => prev.map(item =>
+      item.id === itemId ? { ...item, [field]: value } : item
+    ));
   };
 
   const handleDeleteExpense = async (expenseId: number) => {
@@ -302,6 +362,72 @@ export default function DashboardPage() {
                   rows={3}
                 />
               </div>
+
+              {/* 商品明細セクション */}
+              {editItemsForm.length > 0 && (
+                <div className="border-t pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowItemsSection(!showItemsSection)}
+                    className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3 hover:text-gray-900"
+                  >
+                    {showItemsSection ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    商品明細 ({editItemsForm.length}件)
+                  </button>
+
+                  {showItemsSection && (
+                    <div className="space-y-3">
+                      {editItemsForm.map((item, index) => (
+                        <div key={item.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
+                          <div className="text-xs text-gray-500 font-medium">商品 {index + 1}</div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                商品名
+                              </label>
+                              <input
+                                type="text"
+                                value={item.product_name}
+                                onChange={(e) => handleItemFormChange(item.id, 'product_name', e.target.value)}
+                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                金額
+                              </label>
+                              <input
+                                type="number"
+                                value={item.line_total || ''}
+                                onChange={(e) => handleItemFormChange(item.id, 'line_total', parseInt(e.target.value) || 0)}
+                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              カテゴリ
+                            </label>
+                            <select
+                              value={item.category_id ?? ''}
+                              onChange={(e) => handleItemFormChange(item.id, 'category_id', e.target.value ? parseInt(e.target.value) : null)}
+                              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            >
+                              <option value="">未分類</option>
+                              {categories.map(cat => (
+                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex gap-3">
                 <button
