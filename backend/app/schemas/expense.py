@@ -17,6 +17,14 @@ class ExpenseItemCreate(ExpenseItemBase):
     pass
 
 
+class ExpenseItemUpdate(BaseModel):
+    product_name: Optional[str] = None
+    quantity: Optional[Decimal] = None
+    unit_price: Optional[int] = None
+    line_total: Optional[int] = None
+    category_id: Optional[int] = None
+
+
 class ExpenseItem(ExpenseItemBase):
     id: int
     expense_id: int
