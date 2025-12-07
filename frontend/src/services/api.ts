@@ -55,11 +55,11 @@ api.interceptors.response.use(
 
 // 認証API
 export const authAPI = {
-  login: async (username: string, password: string): Promise<LoginResponse> => {
+  login: async (username: string, password: string, rememberMe: boolean = false): Promise<LoginResponse> => {
     const formData = new FormData();
     formData.append('username', username);
     formData.append('password', password);
-    const response = await api.post<LoginResponse>('/auth/login', formData, {
+    const response = await api.post<LoginResponse>(`/auth/login?remember_me=${rememberMe}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;

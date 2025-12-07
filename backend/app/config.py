@@ -53,7 +53,8 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 1日（通常ログイン）
+    ACCESS_TOKEN_EXPIRE_MINUTES_REMEMBER: int = 43200  # 30日（ログイン状態を保存）
 
     # File Upload
     UPLOAD_DIR: str = "./uploads/receipts"

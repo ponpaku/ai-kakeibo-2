@@ -4,6 +4,7 @@ import { authAPI } from '@/services/api';
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -18,10 +19,11 @@ export default function LoginPage() {
     console.log('='.repeat(60));
     console.log(`🔐 [${timestamp}] LOGIN ATTEMPT STARTED`);
     console.log(`   Username: ${username}`);
+    console.log(`   Remember Me: ${rememberMe}`);
     console.log('='.repeat(60));
 
     try {
-      const response = await authAPI.login(username, password);
+      const response = await authAPI.login(username, password, rememberMe);
 
       console.log('📥 LOGIN RESPONSE RECEIVED:');
       console.log('   Full response:', response);
@@ -115,6 +117,19 @@ export default function LoginPage() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               required
             />
+          </div>
+
+          <div className="flex items-center">
+            <input
+              id="rememberMe"
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            />
+            <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
+              ログイン状態を保存する（30日間）
+            </label>
           </div>
 
           {error && (
