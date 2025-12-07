@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [recentExpenses, setRecentExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedReceipt, setSelectedReceipt] = useState<number | null>(null);
+  const [selectedReceiptUrl, setSelectedReceiptUrl] = useState<string | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [showItemsSection, setShowItemsSection] = useState(true);
@@ -169,8 +169,20 @@ export default function DashboardPage() {
     }
   };
 
-  const handleViewReceipt = (receiptId: number) => {
-    setSelectedReceipt(receiptId);
+  const handleViewReceipt = async (receiptId: number) => {
+    try {
+      const url = await receiptAPI.getReceiptImageUrl(receiptId);
+      setSelectedReceiptUrl(url);
+    } catch (error) {
+      console.error('レシート画像の取得に失敗しました:', error);
+    }
+  };
+
+  const handleCloseReceipt = () => {
+    if (selectedReceiptUrl) {
+      URL.revokeObjectURL(selectedReceiptUrl);
+    }
+    setSelectedReceiptUrl(null);
   };
 
   if (loading) {
@@ -316,14 +328,14 @@ export default function DashboardPage() {
       </div>
 
       {/* レシート表示モーダル */}
-      {selectedReceipt && (
+      {selectedReceiptUrl && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onClick={() => setSelectedReceipt(null)}
+          onClick={handleCloseReceipt}
         >
           <div className="bg-white rounded-lg p-4 max-w-2xl max-h-[90vh] overflow-auto">
             <img
-              src={receiptAPI.getReceiptImage(selectedReceipt)}
+              src={selectedReceiptUrl}
               alt="レシート"
               className="max-w-full h-auto"
             />

@@ -160,8 +160,11 @@ export const receiptAPI = {
       params: { skip_ai: skipAi },
     });
   },
-  getReceiptImage: (receiptId: number): string => {
-    return `/api/receipts/${receiptId}/image`;
+  getReceiptImageUrl: async (receiptId: number): Promise<string> => {
+    const response = await api.get(`/receipts/${receiptId}/image`, {
+      responseType: 'blob',
+    });
+    return URL.createObjectURL(response.data);
   },
   deleteReceipt: async (receiptId: number): Promise<void> => {
     await api.delete(`/receipts/${receiptId}`);
