@@ -41,9 +41,10 @@ async def upload_receipt(
         # Expenseレコードを作成
         expense = Expense(
             user_id=current_user.id,
-            amount=0,  # OCRで更新される
-            expense_date=datetime.now(),
-            product_name="処理中",  # OCRで更新される
+            total_amount=0,  # OCRで更新される
+            occurred_at=datetime.now(),
+            title="処理中",  # OCRで更新される
+            currency="JPY",
             status=ExpenseStatus.PENDING
         )
         db.add(expense)
