@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class CodexService:
-    """Codex exec を使用したOCRと分類サービス"""
+    """codex exec を使用したOCRと分類サービス"""
 
     @staticmethod
     def _fallback_category(categories: List[str]) -> Optional[str]:
@@ -171,7 +171,7 @@ class CodexService:
 
             logger.debug(f"Schema file created: {schema_file.name}")
 
-            # Codex execコマンドを構築
+            # codex execコマンドを構築
             cmd = ["codex", "exec"]
 
             if skip_git_repo_check:
@@ -198,9 +198,9 @@ class CodexService:
                 prompt
             ])
 
-            logger.info(f"Codex exec command: {' '.join(cmd)}")
+            logger.info(f"codex exec command: {' '.join(cmd)}")
 
-            # Codex execを実行
+            # codex execを実行
             result = subprocess.run(
                 cmd,
                 capture_output=True,
@@ -214,13 +214,13 @@ class CodexService:
                 logger.debug(f"STDERR: {result.stderr}")
 
             if result.returncode != 0:
-                raise Exception(f"Codex exec failed (code {result.returncode}): {result.stderr}")
+                raise Exception(f"codex exec failed (code {result.returncode}): {result.stderr}")
 
             # 出力をパース
             output = result.stdout.strip()
 
             if not output:
-                raise Exception("Codex execの出力が空です")
+                raise Exception("codex execの出力が空です")
 
             # JSONとしてパース
             try:
@@ -251,7 +251,7 @@ class CodexService:
             }
 
         except subprocess.TimeoutExpired:
-            logger.error("Codex exec がタイムアウトしました")
+            logger.error("codex exec がタイムアウトしました")
             return {
                 "success": False,
                 "error": "OCR処理がタイムアウトしました",
@@ -350,7 +350,7 @@ class CodexService:
                 f"対象JSON: {expense_json}"
             )
 
-            # Codex execコマンドを構築
+            # codex execコマンドを構築
             cmd = ["codex", "exec"]
 
             if skip_git_repo_check:
@@ -365,9 +365,9 @@ class CodexService:
                 prompt
             ])
 
-            logger.info(f"Codex exec command: {' '.join(cmd)}")
+            logger.info(f"codex exec command: {' '.join(cmd)}")
 
-            # Codex execを実行
+            # codex execを実行
             result = subprocess.run(
                 cmd,
                 capture_output=True,
@@ -381,13 +381,13 @@ class CodexService:
                 logger.debug(f"STDERR: {result.stderr}")
 
             if result.returncode != 0:
-                raise Exception(f"Codex exec failed (code {result.returncode}): {result.stderr}")
+                raise Exception(f"codex exec failed (code {result.returncode}): {result.stderr}")
 
             # 出力をパース
             output = result.stdout.strip()
 
             if not output:
-                raise Exception("Codex execの出力が空です")
+                raise Exception("codex execの出力が空です")
 
             # JSONとしてパース
             try:
@@ -422,7 +422,7 @@ class CodexService:
             }
 
         except subprocess.TimeoutExpired:
-            logger.error("Codex exec がタイムアウトしました")
+            logger.error("codex exec がタイムアウトしました")
             return {
                 "success": False,
                 "error": "分類処理がタイムアウトしました"

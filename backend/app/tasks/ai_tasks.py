@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 @celery_app.task(name="classify_expense_item_task")
 def classify_expense_item_task(expense_item_id: int):
     """
-    ExpenseItemのAI分類タスク（Codex exec使用）
+    ExpenseItemのAI分類タスク（codex exec使用）
 
     Args:
         expense_item_id: ExpenseItem ID

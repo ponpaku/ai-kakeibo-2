@@ -4,7 +4,7 @@ from app.database import Base
 
 
 class AISettings(Base):
-    """AI設定（Codex exec用）"""
+    """AI設定（codex exec用）"""
     __tablename__ = "ai_settings"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -17,7 +17,7 @@ class AISettings(Base):
     classification_model = Column(String(100), nullable=False, default="gpt-5.1-codex-mini")
     classification_enabled = Column(Boolean, default=True)
 
-    # Codex exec共通設定
+    # codex exec共通設定
     sandbox_mode = Column(String(50), default="read-only")  # read-only, none, etc.
     skip_git_repo_check = Column(Boolean, default=True)
 

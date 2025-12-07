@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 @celery_app.task(name="process_receipt_ocr")
 def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
     """
-    レシートのOCR処理タスク（Codex exec使用）
+    レシートのOCR処理タスク（codex exec使用）
     ExpenseItem複数作成に対応
 
     Args:
@@ -71,7 +71,7 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
 
         logger.info(f"OCR処理開始: expense_id={expense_id}, model={ai_settings.ocr_model}")
 
-        # Codex execでOCR実行
+        # codex execでOCR実行
         ocr_result = CodexService.process_receipt_ocr(
             image_path=image_path,
             categories=category_names,

@@ -29,4 +29,4 @@ celery>=5.4.0,<6.0.0
 redis>=5.2.0,<6.0.0
 
 # OCR & AI Classification
-# Codex exec を使用（別途セットアップが必要）
+# codex exec を使用（別途セットアップが必要）
