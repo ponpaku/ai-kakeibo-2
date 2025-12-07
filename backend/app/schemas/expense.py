@@ -53,6 +53,13 @@ class ExpenseCreate(ExpenseBase):
     pass
 
 
+class ExpenseItemUpdate(BaseModel):
+    id: Optional[int] = None  # None means new item
+    product_name: str
+    line_total: int
+    category_id: Optional[int] = None
+
+
 class ExpenseUpdate(BaseModel):
     occurred_at: Optional[datetime] = None
     merchant_name: Optional[str] = None
@@ -67,6 +74,7 @@ class ExpenseUpdate(BaseModel):
     points_program: Optional[str] = None
     description: Optional[str] = None
     note: Optional[str] = None
+    items: Optional[List[ExpenseItemUpdate]] = None
 
 
 class Receipt(BaseModel):
