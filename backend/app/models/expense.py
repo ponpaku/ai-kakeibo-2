@@ -56,7 +56,7 @@ class Expense(Base):
 
     # リレーション
     user = relationship("User", back_populates="expenses")
-    receipt = relationship("Receipt", back_populates="expense", uselist=False)
+    receipt = relationship("Receipt", back_populates="expense", uselist=False, cascade="all, delete-orphan")
     items = relationship("ExpenseItem", back_populates="expense", cascade="all, delete-orphan")
 
     # 複合インデックス
