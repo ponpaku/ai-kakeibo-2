@@ -67,7 +67,7 @@ export default function Calculator({ onCalculate }: CalculatorProps) {
     ['7', '8', '9', '/'],
     ['4', '5', '6', '*'],
     ['1', '2', '3', '-'],
-    ['0', '.', '=', '+'],
+    ['0', '00', '=', '+'],
   ];
 
   return (
@@ -92,13 +92,12 @@ export default function Calculator({ onCalculate }: CalculatorProps) {
                   handleNumber(btn);
                 }
               }}
-              className={`p-4 rounded-lg font-semibold text-lg transition-colors ${
-                ['+', '-', '*', '/'].includes(btn)
+              className={`p-4 rounded-lg font-semibold text-lg transition-colors ${['+', '-', '*', '/'].includes(btn)
                   ? 'bg-primary-500 text-white hover:bg-primary-600'
                   : btn === '='
-                  ? 'bg-green-500 text-white hover:bg-green-600'
-                  : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-              }`}
+                    ? 'bg-green-500 text-white hover:bg-green-600'
+                    : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                }`}
             >
               {btn}
             </button>
