@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import Layout from '@/components/common/Layout';
 import Loading from '@/components/common/Loading';
 import ExpenseList from '@/components/Dashboard/ExpenseList';
 import { dashboardAPI, expenseAPI, receiptAPI, categoryAPI } from '@/services/api';
 import type { DashboardSummary, Expense, Category } from '@/types';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, ChevronDown, ChevronUp } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface EditItemForm {
   id: number;
@@ -15,6 +15,7 @@ interface EditItemForm {
 }
 
 export default function DashboardPage() {
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [recentExpenses, setRecentExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,15 +33,22 @@ export default function DashboardPage() {
   });
   const [editItemsForm, setEditItemsForm] = useState<EditItemForm[]>([]);
 
-  useEffect(() => {
-    loadData();
-    loadCategories();
+  // 月の開始日と終了日を計算
+  const getMonthRange = useCallback((date: Date) => {
+    const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
+    const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59);
+    return {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    };
   }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
+      setLoading(true);
+      const { startDate, endDate } = getMonthRange(selectedMonth);
       const [summaryData, expensesData] = await Promise.all([
-        dashboardAPI.getSummary(),
+        dashboardAPI.getSummary(startDate, endDate),
         dashboardAPI.getRecentExpenses(10),
       ]);
       setSummary(summaryData);
@@ -50,6 +58,31 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
+  }, [selectedMonth, getMonthRange]);
+
+  useEffect(() => {
+    loadData();
+    loadCategories();
+  }, [loadData]);
+
+  // 月を切り替える関数
+  const handlePreviousMonth = () => {
+    setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  // 選択中の月を表示用にフォーマット
+  const formatMonth = (date: Date) => {
+    return `${date.getFullYear()}年${date.getMonth() + 1}月`;
+  };
+
+  // 今月かどうかを判定
+  const isCurrentMonth = (date: Date) => {
+    const now = new Date();
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
   };
 
   const loadCategories = async () => {
@@ -161,86 +194,114 @@ export default function DashboardPage() {
   return (
     <Layout>
       <div className="space-y-6">
-        {/* サマリーカード */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">今月の支出</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  ¥{summary.total_expenses.toLocaleString()}
-                </p>
+        {/* 月別サマリーセクション */}
+        <section className="bg-gray-50 p-6 rounded-xl">
+          {/* 月切り替えヘッダー */}
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <button
+              onClick={handlePreviousMonth}
+              className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+              aria-label="前月"
+            >
+              <ChevronLeft className="text-gray-600" size={24} />
+            </button>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {formatMonth(selectedMonth)}の概要
+            </h2>
+            <button
+              onClick={handleNextMonth}
+              disabled={isCurrentMonth(selectedMonth)}
+              className={`p-2 rounded-full transition-colors ${isCurrentMonth(selectedMonth)
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'hover:bg-gray-200 text-gray-600'
+                }`}
+              aria-label="次月"
+            >
+              <ChevronRight size={24} />
+            </button>
+          </div>
+
+          {/* サマリーカード */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">支出合計</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    ¥{summary.total_expenses.toLocaleString()}
+                  </p>
+                </div>
+                <DollarSign className="text-primary-600" size={32} />
               </div>
-              <DollarSign className="text-primary-600" size={32} />
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">支出回数</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {summary.expense_count}回
+                  </p>
+                </div>
+                <ShoppingBag className="text-primary-600" size={32} />
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">平均支出</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    ¥{Math.round(summary.average_expense).toLocaleString()}
+                  </p>
+                </div>
+                <DollarSign className="text-primary-600" size={32} />
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">先月比</p>
+                  <p className={`text-2xl font-bold ${isIncrease ? 'text-red-600' : 'text-green-600'}`}>
+                    {isIncrease ? '+' : ''}{summary.comparison.change_percent.toFixed(1)}%
+                  </p>
+                </div>
+                {isIncrease ? (
+                  <TrendingUp className="text-red-600" size={32} />
+                ) : (
+                  <TrendingDown className="text-green-600" size={32} />
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">支出回数</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {summary.expense_count}回
-                </p>
-              </div>
-              <ShoppingBag className="text-primary-600" size={32} />
+          {/* カテゴリ別円グラフ */}
+          {summary.category_breakdown.length > 0 && (
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">カテゴリ別支出</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={summary.category_breakdown}
+                    dataKey="total"
+                    nameKey="category_name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    label={(entry) => `${entry.category_name}: ¥${entry.total.toLocaleString()}`}
+                  >
+                    {summary.category_breakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">平均支出</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  ¥{Math.round(summary.average_expense).toLocaleString()}
-                </p>
-              </div>
-              <DollarSign className="text-primary-600" size={32} />
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">先月比</p>
-                <p className={`text-2xl font-bold ${isIncrease ? 'text-red-600' : 'text-green-600'}`}>
-                  {isIncrease ? '+' : ''}{summary.comparison.change_percent.toFixed(1)}%
-                </p>
-              </div>
-              {isIncrease ? (
-                <TrendingUp className="text-red-600" size={32} />
-              ) : (
-                <TrendingDown className="text-green-600" size={32} />
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* カテゴリ別円グラフ */}
-        {summary.category_breakdown.length > 0 && (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">カテゴリ別支出</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={summary.category_breakdown}
-                  dataKey="total"
-                  nameKey="category_name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label={(entry) => `${entry.category_name}: ¥${entry.total.toLocaleString()}`}
-                >
-                  {summary.category_breakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+          )}
+        </section>
 
         {/* 最近の出費 */}
         <div>
