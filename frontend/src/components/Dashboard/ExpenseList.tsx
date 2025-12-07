@@ -42,7 +42,7 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onViewReceipt 
                 日付
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                タイトル
+                店舗名
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 カテゴリ
@@ -60,14 +60,10 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onViewReceipt 
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {expenses.map((expense) => {
-              // すべてのユニークなカテゴリ名を取得
-              const categories = expense.items && expense.items.length > 0
-                ? [...new Set(expense.items.map(item => item.category_name).filter(Boolean))]
-                : [];
-
-              const categoryDisplay = categories.length > 0
-                ? categories.join(', ')
-                : '未分類';
+              // 最初のItemのカテゴリを表示
+              const firstItemCategory = expense.items && expense.items.length > 0
+                ? expense.items[0].category_name
+                : null;
 
               return (
                 <tr key={expense.id} className="hover:bg-gray-50">
@@ -81,7 +77,10 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onViewReceipt 
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {categoryDisplay}
+                    {firstItemCategory || '未分類'}
+                    {expense.items && expense.items.length > 1 && (
+                      <span className="text-xs text-gray-500"> 他</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
                     ¥{expense.total_amount.toLocaleString()}
