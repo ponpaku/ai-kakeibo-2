@@ -12,7 +12,6 @@ from app.schemas.expense import (
     Expense as ExpenseSchema,
     ExpenseCreate,
     ExpenseUpdate,
-    ExpenseItemUpdate,
     ExpenseWithReceipt,
     ExpenseListResponse,
     ManualExpenseCreate,
@@ -180,7 +179,7 @@ def update_expense(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """出費情報を更新（商品明細も含む）"""
+    """出費情報を更新"""
     expense = db.query(Expense).filter(
         Expense.id == expense_id,
         Expense.user_id == current_user.id
@@ -189,49 +188,9 @@ def update_expense(
     if not expense:
         raise HTTPException(status_code=404, detail="出費が見つかりません")
 
-    # 商品明細（items）を除いた更新データを適用
-    update_data = expense_in.model_dump(exclude_unset=True, exclude={'items'})
+    update_data = expense_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(expense, field, value)
-
-    # 商品明細（items）の更新処理
-    if expense_in.items is not None:
-        # バリデーション: 少なくとも1つのitemが必要
-        if len(expense_in.items) == 0:
-            raise HTTPException(status_code=400, detail="少なくとも1つの商品明細が必要です")
-
-        # 既存のitemのIDを取得
-        existing_item_ids = {item.id for item in expense.items}
-        updated_item_ids = {item.id for item in expense_in.items if item.id}
-
-        # 削除されたitemを削除
-        items_to_delete = existing_item_ids - updated_item_ids
-        if items_to_delete:
-            db.query(ExpenseItem).filter(ExpenseItem.id.in_(items_to_delete)).delete(synchronize_session=False)
-
-        # itemsの更新または追加
-        for position, item_update in enumerate(expense_in.items):
-            if item_update.id and item_update.id in existing_item_ids:
-                # 既存のitemを更新
-                existing_item = db.query(ExpenseItem).filter(ExpenseItem.id == item_update.id).first()
-                if existing_item:
-                    existing_item.product_name = item_update.product_name
-                    existing_item.line_total = item_update.line_total
-                    existing_item.category_id = item_update.category_id
-                    existing_item.position = position
-                    if item_update.category_id:
-                        existing_item.category_source = CategorySource.MANUAL
-            else:
-                # 新しいitemを追加
-                new_item = ExpenseItem(
-                    expense_id=expense.id,
-                    position=position,
-                    product_name=item_update.product_name,
-                    line_total=item_update.line_total,
-                    category_id=item_update.category_id,
-                    category_source=CategorySource.MANUAL if item_update.category_id else None
-                )
-                db.add(new_item)
 
     db.commit()
     db.refresh(expense)

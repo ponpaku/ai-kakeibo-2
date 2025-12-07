@@ -3,8 +3,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import Layout from '@/components/common/Layout';
 import Loading from '@/components/common/Loading';
 import ExpenseList from '@/components/Dashboard/ExpenseList';
-import { dashboardAPI, expenseAPI, receiptAPI, categoryAPI } from '@/services/api';
-import type { DashboardSummary, Expense, Category, ExpenseItem } from '@/types';
+import { dashboardAPI, expenseAPI, receiptAPI } from '@/services/api';
+import type { DashboardSummary, Expense } from '@/types';
 import { TrendingUp, TrendingDown, DollarSign, ShoppingBag } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -13,23 +13,13 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [selectedReceipt, setSelectedReceipt] = useState<number | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [editForm, setEditForm] = useState<{
-    title: string;
-    total_amount: number;
-    occurred_at: string;
-    merchant_name: string;
-    note: string;
-    payment_method: string;
-    items: ExpenseItem[];
-  }>({
+  const [editForm, setEditForm] = useState({
     title: '',
     total_amount: 0,
     occurred_at: '',
     merchant_name: '',
     note: '',
     payment_method: '',
-    items: [],
   });
 
   useEffect(() => {
@@ -38,14 +28,12 @@ export default function DashboardPage() {
 
   const loadData = async () => {
     try {
-      const [summaryData, expensesData, categoriesData] = await Promise.all([
+      const [summaryData, expensesData] = await Promise.all([
         dashboardAPI.getSummary(),
         dashboardAPI.getRecentExpenses(10),
-        categoryAPI.listCategories(),
       ]);
       setSummary(summaryData);
       setRecentExpenses(expensesData);
-      setCategories(categoriesData);
     } catch (error) {
       console.error('データの読み込みに失敗しました:', error);
     } finally {
@@ -62,7 +50,6 @@ export default function DashboardPage() {
       merchant_name: expense.merchant_name || '',
       note: expense.note || '',
       payment_method: expense.payment_method || '',
-      items: expense.items || [],
     });
   };
 
@@ -70,40 +57,8 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!editingExpense) return;
 
-    // バリデーション
-    if (editForm.items.length === 0) {
-      alert('少なくとも1つの商品明細が必要です');
-      return;
-    }
-
-    // 商品名が空でないかチェック
-    const hasEmptyProductName = editForm.items.some(item => !item.product_name.trim());
-    if (hasEmptyProductName) {
-      alert('商品名を入力してください');
-      return;
-    }
-
     try {
-      // 合計金額を再計算
-      const calculatedTotal = editForm.items.reduce((sum, item) => sum + item.line_total, 0);
-
-      if (calculatedTotal === 0) {
-        alert('合計金額が0円です。各商品の金額を入力してください');
-        return;
-      }
-
-      const updateData = {
-        ...editForm,
-        total_amount: calculatedTotal,
-        items: editForm.items.map(item => ({
-          id: item.id,
-          product_name: item.product_name,
-          line_total: item.line_total,
-          category_id: item.category_id,
-        })),
-      };
-
-      await expenseAPI.updateExpense(editingExpense.id, updateData);
+      await expenseAPI.updateExpense(editingExpense.id, editForm);
       setEditingExpense(null);
       loadData();
     } catch (error) {
@@ -119,29 +74,6 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('削除に失敗しました:', error);
     }
-  };
-
-  const handleItemChange = (index: number, field: keyof ExpenseItem, value: any) => {
-    const newItems = [...editForm.items];
-    newItems[index] = { ...newItems[index], [field]: value };
-    setEditForm({ ...editForm, items: newItems });
-  };
-
-  const handleAddItem = () => {
-    const newItem: ExpenseItem = {
-      id: 0, // 新規アイテムにはIDが0
-      expense_id: editingExpense?.id || 0,
-      position: editForm.items.length,
-      product_name: '',
-      line_total: 0,
-      category_id: undefined,
-    };
-    setEditForm({ ...editForm, items: [...editForm.items, newItem] });
-  };
-
-  const handleRemoveItem = (index: number) => {
-    const newItems = editForm.items.filter((_, i) => i !== index);
-    setEditForm({ ...editForm, items: newItems });
   };
 
   const handleViewReceipt = (receiptId: number) => {
@@ -305,14 +237,15 @@ export default function DashboardPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  合計金額（商品明細から自動計算）
+                  合計金額 <span className="text-red-500">*</span>
                 </label>
-                <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 font-semibold">
-                  ¥{editForm.items.reduce((sum, item) => sum + (item.line_total || 0), 0).toLocaleString()}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  ※ 合計金額は商品明細の金額から自動計算されます
-                </p>
+                <input
+                  type="number"
+                  value={editForm.total_amount || ''}
+                  onChange={(e) => setEditForm({ ...editForm, total_amount: parseInt(e.target.value) || 0 })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  required
+                />
               </div>
 
               <div>
@@ -368,101 +301,6 @@ export default function DashboardPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   rows={3}
                 />
-              </div>
-
-              {/* 商品明細セクション */}
-              <div className="border-t pt-4 mt-4">
-                <div className="flex justify-between items-center mb-3">
-                  <label className="block text-sm font-medium text-gray-700">
-                    商品明細
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleAddItem}
-                    className="px-3 py-1 text-sm bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors"
-                  >
-                    + 商品を追加
-                  </button>
-                </div>
-
-                {editForm.items.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 border">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">商品名</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">金額</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">カテゴリ</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">操作</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {editForm.items.map((item, index) => (
-                          <tr key={index}>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={item.product_name}
-                                onChange={(e) => handleItemChange(index, 'product_name', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent text-sm"
-                                required
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="number"
-                                value={item.line_total || ''}
-                                onChange={(e) => handleItemChange(index, 'line_total', parseInt(e.target.value) || 0)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent text-sm"
-                                required
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <select
-                                value={item.category_id || ''}
-                                onChange={(e) => handleItemChange(index, 'category_id', e.target.value ? parseInt(e.target.value) : undefined)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent text-sm"
-                              >
-                                <option value="">未分類</option>
-                                {categories.map((cat) => (
-                                  <option key={cat.id} value={cat.id}>
-                                    {cat.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                            <td className="px-3 py-2">
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveItem(index)}
-                                className={`text-sm ${
-                                  editForm.items.length === 1
-                                    ? 'text-gray-400 cursor-not-allowed'
-                                    : 'text-red-600 hover:text-red-800'
-                                }`}
-                                disabled={editForm.items.length === 1}
-                                title={editForm.items.length === 1 ? '最後の商品は削除できません' : '削除'}
-                              >
-                                削除
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot className="bg-gray-50">
-                        <tr>
-                          <td className="px-3 py-2 text-right font-semibold text-sm" colSpan={1}>合計:</td>
-                          <td className="px-3 py-2 font-semibold text-sm">
-                            ¥{editForm.items.reduce((sum, item) => sum + (item.line_total || 0), 0).toLocaleString()}
-                          </td>
-                          <td colSpan={2}></td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500 text-center py-4">商品が登録されていません</p>
-                )}
               </div>
 
               <div className="flex gap-3">
