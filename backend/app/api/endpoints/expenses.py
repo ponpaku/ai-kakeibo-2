@@ -12,6 +12,7 @@ from app.schemas.expense import (
     Expense as ExpenseSchema,
     ExpenseCreate,
     ExpenseUpdate,
+    ExpenseItemUpdate,
     ExpenseWithReceipt,
     ExpenseListResponse,
     ManualExpenseCreate,
@@ -195,6 +196,10 @@ def update_expense(
 
     # 商品明細（items）の更新処理
     if expense_in.items is not None:
+        # バリデーション: 少なくとも1つのitemが必要
+        if len(expense_in.items) == 0:
+            raise HTTPException(status_code=400, detail="少なくとも1つの商品明細が必要です")
+
         # 既存のitemのIDを取得
         existing_item_ids = {item.id for item in expense.items}
         updated_item_ids = {item.id for item in expense_in.items if item.id}

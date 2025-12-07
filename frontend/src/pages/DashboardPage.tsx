@@ -70,9 +70,28 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!editingExpense) return;
 
+    // バリデーション
+    if (editForm.items.length === 0) {
+      alert('少なくとも1つの商品明細が必要です');
+      return;
+    }
+
+    // 商品名が空でないかチェック
+    const hasEmptyProductName = editForm.items.some(item => !item.product_name.trim());
+    if (hasEmptyProductName) {
+      alert('商品名を入力してください');
+      return;
+    }
+
     try {
       // 合計金額を再計算
       const calculatedTotal = editForm.items.reduce((sum, item) => sum + item.line_total, 0);
+
+      if (calculatedTotal === 0) {
+        alert('合計金額が0円です。各商品の金額を入力してください');
+        return;
+      }
+
       const updateData = {
         ...editForm,
         total_amount: calculatedTotal,
@@ -286,15 +305,14 @@ export default function DashboardPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  合計金額 <span className="text-red-500">*</span>
+                  合計金額（商品明細から自動計算）
                 </label>
-                <input
-                  type="number"
-                  value={editForm.total_amount || ''}
-                  onChange={(e) => setEditForm({ ...editForm, total_amount: parseInt(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  required
-                />
+                <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 font-semibold">
+                  ¥{editForm.items.reduce((sum, item) => sum + (item.line_total || 0), 0).toLocaleString()}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  ※ 合計金額は商品明細の金額から自動計算されます
+                </p>
               </div>
 
               <div>
@@ -417,8 +435,13 @@ export default function DashboardPage() {
                               <button
                                 type="button"
                                 onClick={() => handleRemoveItem(index)}
-                                className="text-red-600 hover:text-red-800 text-sm"
+                                className={`text-sm ${
+                                  editForm.items.length === 1
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-red-600 hover:text-red-800'
+                                }`}
                                 disabled={editForm.items.length === 1}
+                                title={editForm.items.length === 1 ? '最後の商品は削除できません' : '削除'}
                               >
                                 削除
                               </button>
