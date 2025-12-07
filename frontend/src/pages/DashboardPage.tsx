@@ -65,6 +65,22 @@ export default function DashboardPage() {
     loadCategories();
   }, [loadData]);
 
+  // 処理中のexpenseが存在するかチェック
+  const hasProcessingExpenses = recentExpenses.some(
+    expense => expense.status === 'processing' || expense.status === 'pending'
+  );
+
+  // 処理中のexpenseがある場合、ポーリングでデータを再取得
+  useEffect(() => {
+    if (!hasProcessingExpenses) return;
+
+    const pollInterval = setInterval(() => {
+      loadData();
+    }, 3000); // 3秒間隔
+
+    return () => clearInterval(pollInterval);
+  }, [hasProcessingExpenses, loadData]);
+
   // 月を切り替える関数
   const handlePreviousMonth = () => {
     setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
