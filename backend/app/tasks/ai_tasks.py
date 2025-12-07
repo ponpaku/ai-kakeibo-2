@@ -6,12 +6,18 @@ from app.models.category import Category
 from app.models.ai_settings import AISettings
 from app.services.codex_service import CodexService
 from app.services.category_rule_service import CategoryRuleService
+from sqlalchemy.exc import OperationalError, DBAPIError
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="classify_expense_item_task")
+@celery_app.task(
+    name="classify_expense_item_task",
+    autoretry_for=(OperationalError, DBAPIError),
+    retry_kwargs={'max_retries': 3, 'countdown': 5},
+    retry_backoff=True
+)
 def classify_expense_item_task(expense_item_id: int):
     """
     ExpenseItemのAI分類タスク（codex exec使用）

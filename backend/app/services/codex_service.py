@@ -150,26 +150,26 @@ class CodexService:
                 "raw_output": str
             }
         """
-        schema_file = None
+        schema_file_path = None
         try:
             # 画像ファイルの存在確認
             if not os.path.exists(image_path):
                 raise FileNotFoundError(f"画像ファイルが見つかりません: {image_path}")
 
-            logger.info(f"Codex OCR処理開始: {image_path}, model={model}")
+            logger.info(f"codex OCR処理開始: {image_path}, model={model}")
 
             # JSON Schemaを一時ファイルに保存
             schema = CodexService.get_receipt_schema(categories)
-            schema_file = tempfile.NamedTemporaryFile(
+            with tempfile.NamedTemporaryFile(
                 mode='w',
                 suffix='.json',
                 delete=False,
                 encoding='utf-8'
-            )
-            json.dump(schema, schema_file, ensure_ascii=False, indent=2)
-            schema_file.close()
+            ) as schema_file:
+                json.dump(schema, schema_file, ensure_ascii=False, indent=2)
+                schema_file_path = schema_file.name
 
-            logger.debug(f"Schema file created: {schema_file.name}")
+            logger.debug(f"Schema file created: {schema_file_path}")
 
             # codex execコマンドを構築
             cmd = ["codex", "exec"]
@@ -194,7 +194,7 @@ class CodexService:
             cmd.extend([
                 "-m", model,
                 "-i", image_path,
-                "--output-schema", schema_file.name,
+                "--output-schema", schema_file_path,
                 prompt
             ])
 
@@ -275,12 +275,12 @@ class CodexService:
             }
         finally:
             # 一時スキーマファイルを削除
-            if schema_file and os.path.exists(schema_file.name):
+            if schema_file_path and os.path.exists(schema_file_path):
                 try:
-                    os.unlink(schema_file.name)
-                    logger.debug(f"Schema file deleted: {schema_file.name}")
+                    os.unlink(schema_file_path)
+                    logger.debug(f"Schema file deleted: {schema_file_path}")
                 except Exception as e:
-                    logger.warning(f"Schema file削除失敗: {schema_file.name} - {str(e)}")
+                    logger.warning(f"Schema file削除失敗: {schema_file_path} - {str(e)}")
 
     @staticmethod
     def classify_expense(
@@ -315,20 +315,20 @@ class CodexService:
                 "error": str (失敗時)
             }
         """
-        schema_file = None
+        schema_file_path = None
         try:
-            logger.info(f"Codex 分類処理開始: product={product_name}, model={model}")
+            logger.info(f"codex 分類処理開始: product={product_name}, model={model}")
 
             # JSON Schemaを一時ファイルに保存
             schema = CodexService.get_classification_schema(categories)
-            schema_file = tempfile.NamedTemporaryFile(
+            with tempfile.NamedTemporaryFile(
                 mode='w',
                 suffix='.json',
                 delete=False,
                 encoding='utf-8'
-            )
-            json.dump(schema, schema_file, ensure_ascii=False, indent=2)
-            schema_file.close()
+            ) as schema_file:
+                json.dump(schema, schema_file, ensure_ascii=False, indent=2)
+                schema_file_path = schema_file.name
 
             input_data = {
                 "product_name": product_name,
@@ -336,7 +336,7 @@ class CodexService:
                 "amount": amount,
                 "note": note
             }
-            logger.debug(f"Schema file: {schema_file.name}")
+            logger.debug(f"Schema file: {schema_file_path}")
 
             categories_json = json.dumps(categories, ensure_ascii=False)
             expense_json = json.dumps(input_data, ensure_ascii=False)
@@ -363,7 +363,7 @@ class CodexService:
 
             cmd.extend([
                 "-m", model,
-                "--output-schema", schema_file.name,
+                "--output-schema", schema_file_path,
                 prompt
             ])
 
@@ -439,9 +439,10 @@ class CodexService:
             }
         finally:
             # 一時ファイルを削除
-            if schema_file and os.path.exists(schema_file.name):
+            if schema_file_path and os.path.exists(schema_file_path):
                 try:
-                    os.unlink(schema_file.name)
+                    os.unlink(schema_file_path)
+                    logger.debug(f"Schema file deleted: {schema_file_path}")
                 except Exception as e:
-                    logger.warning(f"Schema file削除失敗: {str(e)}")
+                    logger.warning(f"Schema file削除失敗: {schema_file_path} - {str(e)}")
 

@@ -12,13 +12,19 @@ from app.services.image_service import ImageService
 from app.tasks.ai_tasks import classify_expense_item_task
 from app.constants import OCR_SCHEMA_VERSION
 from app.services.category_rule_service import CategoryRuleService
+from sqlalchemy.exc import OperationalError, DBAPIError
 import logging
 import json
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="process_receipt_ocr")
+@celery_app.task(
+    name="process_receipt_ocr",
+    autoretry_for=(OperationalError, DBAPIError),
+    retry_kwargs={'max_retries': 3, 'countdown': 5},
+    retry_backoff=True
+)
 def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
     """
     レシートのOCR処理タスク（codex exec使用）
