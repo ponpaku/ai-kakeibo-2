@@ -212,8 +212,8 @@ export default function DashboardPage() {
               onClick={handleNextMonth}
               disabled={isCurrentMonth(selectedMonth)}
               className={`p-2 rounded-full transition-colors ${isCurrentMonth(selectedMonth)
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : 'hover:bg-gray-200 text-gray-600'
+                ? 'text-gray-300 cursor-not-allowed'
+                : 'hover:bg-gray-200 text-gray-600'
                 }`}
               aria-label="次月"
             >
@@ -351,7 +351,7 @@ export default function DashboardPage() {
                   type="text"
                   value={editForm.title}
                   onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   required
                 />
               </div>
@@ -364,7 +364,7 @@ export default function DashboardPage() {
                   type="number"
                   value={editForm.total_amount || ''}
                   onChange={(e) => setEditForm({ ...editForm, total_amount: parseInt(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   required
                 />
               </div>
@@ -377,7 +377,7 @@ export default function DashboardPage() {
                   type="date"
                   value={editForm.occurred_at}
                   onChange={(e) => setEditForm({ ...editForm, occurred_at: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   required
                 />
               </div>
@@ -390,7 +390,7 @@ export default function DashboardPage() {
                   type="text"
                   value={editForm.merchant_name}
                   onChange={(e) => setEditForm({ ...editForm, merchant_name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
 
@@ -401,7 +401,7 @@ export default function DashboardPage() {
                 <select
                   value={editForm.payment_method}
                   onChange={(e) => setEditForm({ ...editForm, payment_method: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="">未選択</option>
                   <option value="cash">現金</option>
@@ -419,7 +419,7 @@ export default function DashboardPage() {
                 <textarea
                   value={editForm.note}
                   onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   rows={3}
                 />
               </div>
@@ -451,7 +451,7 @@ export default function DashboardPage() {
                                 type="text"
                                 value={item.product_name}
                                 onChange={(e) => handleItemFormChange(item.id, 'product_name', e.target.value)}
-                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                className="w-full px-3 py-1.5 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                               />
                             </div>
 
@@ -463,7 +463,7 @@ export default function DashboardPage() {
                                 type="number"
                                 value={item.line_total || ''}
                                 onChange={(e) => handleItemFormChange(item.id, 'line_total', parseInt(e.target.value) || 0)}
-                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                className="w-full px-3 py-1.5 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                               />
                             </div>
                           </div>
@@ -475,7 +475,7 @@ export default function DashboardPage() {
                             <select
                               value={item.category_id ?? ''}
                               onChange={(e) => handleItemFormChange(item.id, 'category_id', e.target.value ? parseInt(e.target.value) : null)}
-                              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              className="w-full px-3 py-1.5 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                             >
                               <option value="">未分類</option>
                               {categories.map(cat => (

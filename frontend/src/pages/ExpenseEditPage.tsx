@@ -139,7 +139,7 @@ export default function ExpenseEditPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, product_name: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="例: キュキュット、洗剤、食材など"
                 required
               />
@@ -155,7 +155,7 @@ export default function ExpenseEditPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 required
               />
             </div>
@@ -170,7 +170,7 @@ export default function ExpenseEditPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, expense_date: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 required
               />
             </div>
@@ -185,7 +185,7 @@ export default function ExpenseEditPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, store_name: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 placeholder="例: スーパーマーケット"
               />
             </div>
@@ -199,7 +199,7 @@ export default function ExpenseEditPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, note: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 rows={3}
                 placeholder="例: セール品、まとめ買いなど"
               />
@@ -217,7 +217,7 @@ export default function ExpenseEditPage() {
                     category_id: e.target.value ? parseInt(e.target.value) : undefined,
                   })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 <option value="">AIに分類させる</option>
                 {categories.map((cat) => (
