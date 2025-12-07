@@ -3,6 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/common/Layout';
 import { expenseAPI, categoryAPI } from '@/services/api';
 import type { Expense, Category } from '@/types';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+
+interface EditItemForm {
+  id: number;
+  product_name: string;
+  line_total: number;
+  category_id: number | null;
+}
 
 export default function ExpenseEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -12,15 +20,18 @@ export default function ExpenseEditPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showItemsSection, setShowItemsSection] = useState(true);
 
   const [formData, setFormData] = useState({
-    product_name: '',
-    amount: 0,
-    store_name: '',
+    title: '',
+    total_amount: 0,
+    occurred_at: '',
+    merchant_name: '',
     note: '',
-    category_id: undefined as number | undefined,
-    expense_date: '',
+    payment_method: '',
   });
+
+  const [editItemsForm, setEditItemsForm] = useState<EditItemForm[]>([]);
 
   useEffect(() => {
     loadData();
@@ -39,15 +50,27 @@ export default function ExpenseEditPage() {
       setCategories(categoriesData);
 
       setFormData({
-        product_name: expenseData.product_name || '',
-        amount: expenseData.amount || 0,
-        store_name: expenseData.store_name || '',
-        note: expenseData.note || '',
-        category_id: expenseData.category_id,
-        expense_date: expenseData.expense_date
-          ? new Date(expenseData.expense_date).toISOString().split('T')[0]
+        title: expenseData.title || '',
+        total_amount: expenseData.total_amount || 0,
+        occurred_at: expenseData.occurred_at
+          ? expenseData.occurred_at.split('T')[0]
           : new Date().toISOString().split('T')[0],
+        merchant_name: expenseData.merchant_name || '',
+        note: expenseData.note || '',
+        payment_method: expenseData.payment_method || '',
       });
+
+      // items フォームを初期化
+      if (expenseData.items && expenseData.items.length > 0) {
+        setEditItemsForm(expenseData.items.map(item => ({
+          id: item.id,
+          product_name: item.product_name,
+          line_total: item.line_total,
+          category_id: item.category_id ?? null,
+        })));
+      } else {
+        setEditItemsForm([]);
+      }
     } catch (error) {
       console.error('データの読み込みに失敗しました:', error);
       alert('データの読み込みに失敗しました');
@@ -57,21 +80,52 @@ export default function ExpenseEditPage() {
     }
   };
 
+  const handleItemFormChange = (itemId: number, field: keyof EditItemForm, value: string | number | null) => {
+    setEditItemsForm(prev => prev.map(item =>
+      item.id === itemId ? { ...item, [field]: value } : item
+    ));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.product_name.trim()) {
-      alert('商品名を入力してください');
+    if (!formData.title.trim()) {
+      alert('タイトルを入力してください');
       return;
     }
 
     setSaving(true);
 
     try {
+      // Expense本体の更新
       await expenseAPI.updateExpense(Number(id), {
-        ...formData,
-        expense_date: new Date(formData.expense_date).toISOString(),
+        title: formData.title,
+        total_amount: formData.total_amount,
+        occurred_at: formData.occurred_at,
+        merchant_name: formData.merchant_name,
+        note: formData.note,
+        payment_method: formData.payment_method,
       });
+
+      // 各ExpenseItemの更新
+      for (const itemForm of editItemsForm) {
+        const originalItem = expense?.items?.find(i => i.id === itemForm.id);
+        if (originalItem) {
+          // 変更があったかチェック
+          const hasChanges =
+            originalItem.product_name !== itemForm.product_name ||
+            originalItem.line_total !== itemForm.line_total ||
+            (originalItem.category_id ?? null) !== itemForm.category_id;
+
+          if (hasChanges) {
+            await expenseAPI.updateExpenseItem(Number(id), itemForm.id, {
+              product_name: itemForm.product_name,
+              line_total: itemForm.line_total,
+              category_id: itemForm.category_id,
+            });
+          }
+        }
+      }
 
       alert('出費を更新しました');
       navigate('/');
@@ -117,44 +171,30 @@ export default function ExpenseEditPage() {
 
         <h1 className="text-2xl font-bold text-gray-900 mb-6">出費を編集</h1>
 
-        {/* OCR結果表示 */}
-        {expense.ocr_raw_text && (
-          <div className="bg-gray-50 p-4 rounded-lg mb-6">
-            <h2 className="text-sm font-semibold text-gray-700 mb-2">OCR結果</h2>
-            <pre className="text-xs text-gray-600 whitespace-pre-wrap max-h-40 overflow-y-auto">
-              {expense.ocr_raw_text}
-            </pre>
-          </div>
-        )}
-
         <div className="bg-white p-6 rounded-lg shadow-md">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                商品名 <span className="text-red-500">*</span>
+                タイトル <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                value={formData.product_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, product_name: e.target.value })
-                }
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="例: キュキュット、洗剤、食材など"
+                placeholder="例: セブン-イレブンでの購入"
                 required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                金額 <span className="text-red-500">*</span>
+                合計金額 <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
-                value={formData.amount || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })
-                }
+                value={formData.total_amount || ''}
+                onChange={(e) => setFormData({ ...formData, total_amount: parseInt(e.target.value) || 0 })}
                 className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 required
               />
@@ -166,10 +206,8 @@ export default function ExpenseEditPage() {
               </label>
               <input
                 type="date"
-                value={formData.expense_date}
-                onChange={(e) =>
-                  setFormData({ ...formData, expense_date: e.target.value })
-                }
+                value={formData.occurred_at}
+                onChange={(e) => setFormData({ ...formData, occurred_at: e.target.value })}
                 className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 required
               />
@@ -177,17 +215,33 @@ export default function ExpenseEditPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                店舗名（任意）
+                店舗名/加盟店名（任意）
               </label>
               <input
                 type="text"
-                value={formData.store_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, store_name: e.target.value })
-                }
+                value={formData.merchant_name}
+                onChange={(e) => setFormData({ ...formData, merchant_name: e.target.value })}
                 className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="例: スーパーマーケット"
+                placeholder="例: セブン-イレブン"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                支払い方法（任意）
+              </label>
+              <select
+                value={formData.payment_method}
+                onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value="">未選択</option>
+                <option value="cash">現金</option>
+                <option value="credit">クレジットカード</option>
+                <option value="debit">デビットカード</option>
+                <option value="e-money">電子マネー</option>
+                <option value="qr">QRコード決済</option>
+              </select>
             </div>
 
             <div>
@@ -196,39 +250,80 @@ export default function ExpenseEditPage() {
               </label>
               <textarea
                 value={formData.note}
-                onChange={(e) =>
-                  setFormData({ ...formData, note: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                 className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 rows={3}
                 placeholder="例: セール品、まとめ買いなど"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                カテゴリ（任意）
-              </label>
-              <select
-                value={formData.category_id || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    category_id: e.target.value ? parseInt(e.target.value) : undefined,
-                  })
-                }
-                className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                <option value="">AIに分類させる</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* 商品明細セクション */}
+            {editItemsForm.length > 0 && (
+              <div className="border-t pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowItemsSection(!showItemsSection)}
+                  className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3 hover:text-gray-900"
+                >
+                  {showItemsSection ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  商品明細 ({editItemsForm.length}件)
+                </button>
 
-            <div className="flex gap-4">
+                {showItemsSection && (
+                  <div className="space-y-3">
+                    {editItemsForm.map((item, index) => (
+                      <div key={item.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
+                        <div className="text-xs text-gray-500 font-medium">商品 {index + 1}</div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              商品名
+                            </label>
+                            <input
+                              type="text"
+                              value={item.product_name}
+                              onChange={(e) => handleItemFormChange(item.id, 'product_name', e.target.value)}
+                              className="w-full px-3 py-1.5 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              金額
+                            </label>
+                            <input
+                              type="number"
+                              value={item.line_total || ''}
+                              onChange={(e) => handleItemFormChange(item.id, 'line_total', parseInt(e.target.value) || 0)}
+                              className="w-full px-3 py-1.5 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            カテゴリ
+                          </label>
+                          <select
+                            value={item.category_id ?? ''}
+                            onChange={(e) => handleItemFormChange(item.id, 'category_id', e.target.value ? parseInt(e.target.value) : null)}
+                            className="w-full px-3 py-1.5 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                          >
+                            <option value="">未分類</option>
+                            {categories.map(cat => (
+                              <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-4 pt-4">
               <button
                 type="submit"
                 disabled={saving}
