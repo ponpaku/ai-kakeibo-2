@@ -3,8 +3,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import Layout from '@/components/common/Layout';
 import Loading from '@/components/common/Loading';
 import ExpenseList from '@/components/Dashboard/ExpenseList';
-import { dashboardAPI, expenseAPI, receiptAPI, categoryAPI } from '@/services/api';
-import type { DashboardSummary, Expense, Category, ExpenseItem } from '@/types';
+import { dashboardAPI, expenseAPI, receiptAPI } from '@/services/api';
+import type { DashboardSummary, Expense } from '@/types';
 import { TrendingUp, TrendingDown, DollarSign, ShoppingBag } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -13,7 +13,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [selectedReceipt, setSelectedReceipt] = useState<number | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [editForm, setEditForm] = useState({
     title: '',
     total_amount: 0,
@@ -22,7 +21,6 @@ export default function DashboardPage() {
     note: '',
     payment_method: '',
   });
-  const [editingItems, setEditingItems] = useState<ExpenseItem[]>([]);
 
   useEffect(() => {
     loadData();
@@ -30,14 +28,12 @@ export default function DashboardPage() {
 
   const loadData = async () => {
     try {
-      const [summaryData, expensesData, categoriesData] = await Promise.all([
+      const [summaryData, expensesData] = await Promise.all([
         dashboardAPI.getSummary(),
         dashboardAPI.getRecentExpenses(10),
-        categoryAPI.listCategories(),
       ]);
       setSummary(summaryData);
       setRecentExpenses(expensesData);
-      setCategories(categoriesData);
     } catch (error) {
       console.error('データの読み込みに失敗しました:', error);
     } finally {
@@ -55,8 +51,6 @@ export default function DashboardPage() {
       note: expense.note || '',
       payment_method: expense.payment_method || '',
     });
-    // アイテムのコピーを作成して編集用に設定
-    setEditingItems(expense.items ? [...expense.items] : []);
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -64,41 +58,13 @@ export default function DashboardPage() {
     if (!editingExpense) return;
 
     try {
-      // 出費ヘッダーを更新
       await expenseAPI.updateExpense(editingExpense.id, editForm);
-
-      // 各アイテムを更新（変更があった場合のみ）
-      const updatePromises = editingItems.map(async (item) => {
-        const originalItem = editingExpense.items?.find(i => i.id === item.id);
-        if (originalItem && (
-          originalItem.category_id !== item.category_id ||
-          originalItem.product_name !== item.product_name ||
-          originalItem.line_total !== item.line_total
-        )) {
-          return expenseAPI.updateExpenseItem(editingExpense.id, item.id, {
-            product_name: item.product_name,
-            line_total: item.line_total,
-            category_id: item.category_id,
-          });
-        }
-      });
-
-      await Promise.all(updatePromises);
       setEditingExpense(null);
-      setEditingItems([]);
       loadData();
     } catch (error) {
       console.error('更新に失敗しました:', error);
       alert('更新に失敗しました');
     }
-  };
-
-  const handleItemChange = (itemId: number, field: keyof ExpenseItem, value: any) => {
-    setEditingItems(items =>
-      items.map(item =>
-        item.id === itemId ? { ...item, [field]: value } : item
-      )
-    );
   };
 
   const handleDeleteExpense = async (expenseId: number) => {
@@ -251,7 +217,7 @@ export default function DashboardPage() {
           onClick={() => setEditingExpense(null)}
         >
           <div
-            className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-auto"
+            className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-xl font-bold text-gray-900 mb-4">出費を編集</h2>
@@ -337,69 +303,10 @@ export default function DashboardPage() {
                 />
               </div>
 
-              {/* アイテム一覧 */}
-              {editingItems.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    商品明細
-                  </label>
-                  <div className="border border-gray-300 rounded-lg overflow-hidden">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">商品名</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">金額</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">カテゴリ</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {editingItems.map((item) => (
-                          <tr key={item.id}>
-                            <td className="px-4 py-2">
-                              <input
-                                type="text"
-                                value={item.product_name}
-                                onChange={(e) => handleItemChange(item.id, 'product_name', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                              />
-                            </td>
-                            <td className="px-4 py-2">
-                              <input
-                                type="number"
-                                value={item.line_total}
-                                onChange={(e) => handleItemChange(item.id, 'line_total', parseInt(e.target.value) || 0)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                              />
-                            </td>
-                            <td className="px-4 py-2">
-                              <select
-                                value={item.category_id || ''}
-                                onChange={(e) => handleItemChange(item.id, 'category_id', e.target.value ? parseInt(e.target.value) : null)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                              >
-                                <option value="">未分類</option>
-                                {categories.map((category) => (
-                                  <option key={category.id} value={category.id}>
-                                    {category.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setEditingExpense(null);
-                    setEditingItems([]);
-                  }}
+                  onClick={() => setEditingExpense(null)}
                   className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
                 >
                   キャンセル
