@@ -131,18 +131,17 @@ def get_recent_expenses(
     """最近の出費を取得"""
     expenses = db.query(Expense).filter(
         Expense.user_id == current_user.id
-    ).options(joinedload(Expense.items))\
+    ).options(joinedload(Expense.items), joinedload(Expense.receipt))\
      .order_by(Expense.occurred_at.desc())\
      .limit(limit)\
      .all()
 
-    # カテゴリIDのマップを一括取得（N+1問題の回避）
+    # 全カテゴリIDのマップを一括取得（N+1問題の回避）
     category_ids = set()
     for expense in expenses:
-        if expense.items:
-            first_item = expense.items[0]
-            if first_item.category_id:
-                category_ids.add(first_item.category_id)
+        for item in expense.items:
+            if item.category_id:
+                category_ids.add(item.category_id)
 
     category_map = {}
     if category_ids:
@@ -151,23 +150,38 @@ def get_recent_expenses(
 
     result = []
     for expense in expenses:
-        # ExpenseItemsからカテゴリを取得（最初のItemのカテゴリ）
-        category_name = None
-        if expense.items:
-            first_item = expense.items[0]
-            if first_item.category_id and first_item.category_id in category_map:
-                category_name = category_map[first_item.category_id]
+        # ExpenseItemsを全てカテゴリ名付きで返す
+        items_with_category = []
+        for item in expense.items:
+            items_with_category.append({
+                "id": item.id,
+                "expense_id": item.expense_id,
+                "position": item.position,
+                "product_name": item.product_name,
+                "quantity": float(item.quantity) if item.quantity else None,
+                "unit_price": item.unit_price,
+                "line_total": item.line_total,
+                "category_id": item.category_id,
+                "category_source": item.category_source.value if item.category_source else None,
+                "ai_confidence": float(item.ai_confidence) if item.ai_confidence else None,
+                "category_name": category_map.get(item.category_id) if item.category_id else None
+            })
 
         result.append({
             "id": expense.id,
+            "user_id": expense.user_id,
             "total_amount": float(expense.total_amount),
             "occurred_at": expense.occurred_at,
             "merchant_name": expense.merchant_name,
             "title": expense.title,
             "description": expense.description,
-            "category_name": category_name,
-            "status": expense.status,
-            "item_count": len(expense.items),
+            "note": expense.note,
+            "currency": expense.currency,
+            "payment_method": expense.payment_method,
+            "status": expense.status.value if hasattr(expense.status, 'value') else expense.status,
+            "created_at": expense.created_at,
+            "updated_at": expense.updated_at,
+            "items": items_with_category,
             "receipt": {"id": expense.receipt.id, "file_path": expense.receipt.file_path} if expense.receipt else None
         })
 
