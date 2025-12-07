@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class CodexService:
-    """Codex exec を使用したOCRと分類サービス"""
+    """codex exec を使用したOCRと分類サービス"""
 
     @staticmethod
     def _fallback_category(categories: List[str]) -> Optional[str]:
@@ -150,28 +150,28 @@ class CodexService:
                 "raw_output": str
             }
         """
-        schema_file = None
+        schema_file_path = None
         try:
             # 画像ファイルの存在確認
             if not os.path.exists(image_path):
                 raise FileNotFoundError(f"画像ファイルが見つかりません: {image_path}")
 
-            logger.info(f"Codex OCR処理開始: {image_path}, model={model}")
+            logger.info(f"codex OCR処理開始: {image_path}, model={model}")
 
             # JSON Schemaを一時ファイルに保存
             schema = CodexService.get_receipt_schema(categories)
-            schema_file = tempfile.NamedTemporaryFile(
+            with tempfile.NamedTemporaryFile(
                 mode='w',
                 suffix='.json',
                 delete=False,
                 encoding='utf-8'
-            )
-            json.dump(schema, schema_file, ensure_ascii=False, indent=2)
-            schema_file.close()
+            ) as schema_file:
+                json.dump(schema, schema_file, ensure_ascii=False, indent=2)
+                schema_file_path = schema_file.name
 
-            logger.debug(f"Schema file created: {schema_file.name}")
+            logger.debug(f"Schema file created: {schema_file_path}")
 
-            # Codex execコマンドを構築
+            # codex execコマンドを構築
             cmd = ["codex", "exec"]
 
             if skip_git_repo_check:
@@ -194,18 +194,20 @@ class CodexService:
             cmd.extend([
                 "-m", model,
                 "-i", image_path,
-                "--output-schema", schema_file.name,
+                "--output-schema", schema_file_path,
                 prompt
             ])
 
-            logger.info(f"Codex exec command: {' '.join(cmd)}")
+            logger.info(f"codex exec command: {' '.join(cmd)}")
 
-            # Codex execを実行
+            # codex execを実行
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=180  # 3分タイムアウト
+                timeout=180,  # 3分タイムアウト
+                shell=False,  # セキュリティのため明示的に指定
+                check=False   # return codeを手動でチェック
             )
 
             logger.debug(f"Return code: {result.returncode}")
@@ -214,13 +216,13 @@ class CodexService:
                 logger.debug(f"STDERR: {result.stderr}")
 
             if result.returncode != 0:
-                raise Exception(f"Codex exec failed (code {result.returncode}): {result.stderr}")
+                raise Exception(f"codex exec failed (code {result.returncode}): {result.stderr}")
 
             # 出力をパース
             output = result.stdout.strip()
 
             if not output:
-                raise Exception("Codex execの出力が空です")
+                raise Exception("codex execの出力が空です")
 
             # JSONとしてパース
             try:
@@ -251,7 +253,7 @@ class CodexService:
             }
 
         except subprocess.TimeoutExpired:
-            logger.error("Codex exec がタイムアウトしました")
+            logger.error("codex exec がタイムアウトしました")
             return {
                 "success": False,
                 "error": "OCR処理がタイムアウトしました",
@@ -273,12 +275,12 @@ class CodexService:
             }
         finally:
             # 一時スキーマファイルを削除
-            if schema_file and os.path.exists(schema_file.name):
+            if schema_file_path and os.path.exists(schema_file_path):
                 try:
-                    os.unlink(schema_file.name)
-                    logger.debug(f"Schema file deleted: {schema_file.name}")
+                    os.unlink(schema_file_path)
+                    logger.debug(f"Schema file deleted: {schema_file_path}")
                 except Exception as e:
-                    logger.warning(f"Schema file削除失敗: {schema_file.name} - {str(e)}")
+                    logger.warning(f"Schema file削除失敗: {schema_file_path} - {str(e)}")
 
     @staticmethod
     def classify_expense(
@@ -313,20 +315,20 @@ class CodexService:
                 "error": str (失敗時)
             }
         """
-        schema_file = None
+        schema_file_path = None
         try:
-            logger.info(f"Codex 分類処理開始: product={product_name}, model={model}")
+            logger.info(f"codex 分類処理開始: product={product_name}, model={model}")
 
             # JSON Schemaを一時ファイルに保存
             schema = CodexService.get_classification_schema(categories)
-            schema_file = tempfile.NamedTemporaryFile(
+            with tempfile.NamedTemporaryFile(
                 mode='w',
                 suffix='.json',
                 delete=False,
                 encoding='utf-8'
-            )
-            json.dump(schema, schema_file, ensure_ascii=False, indent=2)
-            schema_file.close()
+            ) as schema_file:
+                json.dump(schema, schema_file, ensure_ascii=False, indent=2)
+                schema_file_path = schema_file.name
 
             input_data = {
                 "product_name": product_name,
@@ -334,7 +336,7 @@ class CodexService:
                 "amount": amount,
                 "note": note
             }
-            logger.debug(f"Schema file: {schema_file.name}")
+            logger.debug(f"Schema file: {schema_file_path}")
 
             categories_json = json.dumps(categories, ensure_ascii=False)
             expense_json = json.dumps(input_data, ensure_ascii=False)
@@ -350,7 +352,7 @@ class CodexService:
                 f"対象JSON: {expense_json}"
             )
 
-            # Codex execコマンドを構築
+            # codex execコマンドを構築
             cmd = ["codex", "exec"]
 
             if skip_git_repo_check:
@@ -361,18 +363,20 @@ class CodexService:
 
             cmd.extend([
                 "-m", model,
-                "--output-schema", schema_file.name,
+                "--output-schema", schema_file_path,
                 prompt
             ])
 
-            logger.info(f"Codex exec command: {' '.join(cmd)}")
+            logger.info(f"codex exec command: {' '.join(cmd)}")
 
-            # Codex execを実行
+            # codex execを実行
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=60  # 1分タイムアウト
+                timeout=60,  # 1分タイムアウト
+                shell=False,  # セキュリティのため明示的に指定
+                check=False   # return codeを手動でチェック
             )
 
             logger.debug(f"Return code: {result.returncode}")
@@ -381,13 +385,13 @@ class CodexService:
                 logger.debug(f"STDERR: {result.stderr}")
 
             if result.returncode != 0:
-                raise Exception(f"Codex exec failed (code {result.returncode}): {result.stderr}")
+                raise Exception(f"codex exec failed (code {result.returncode}): {result.stderr}")
 
             # 出力をパース
             output = result.stdout.strip()
 
             if not output:
-                raise Exception("Codex execの出力が空です")
+                raise Exception("codex execの出力が空です")
 
             # JSONとしてパース
             try:
@@ -422,7 +426,7 @@ class CodexService:
             }
 
         except subprocess.TimeoutExpired:
-            logger.error("Codex exec がタイムアウトしました")
+            logger.error("codex exec がタイムアウトしました")
             return {
                 "success": False,
                 "error": "分類処理がタイムアウトしました"
@@ -435,9 +439,10 @@ class CodexService:
             }
         finally:
             # 一時ファイルを削除
-            if schema_file and os.path.exists(schema_file.name):
+            if schema_file_path and os.path.exists(schema_file_path):
                 try:
-                    os.unlink(schema_file.name)
+                    os.unlink(schema_file_path)
+                    logger.debug(f"Schema file deleted: {schema_file_path}")
                 except Exception as e:
-                    logger.warning(f"Schema file削除失敗: {str(e)}")
+                    logger.warning(f"Schema file削除失敗: {schema_file_path} - {str(e)}")
 

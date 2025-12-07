@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from datetime import datetime as dt
 from app.tasks.celery_app import celery_app
 from app.database import SessionLocal
 from app.models.expense import Expense, ExpenseStatus
@@ -11,16 +12,22 @@ from app.services.image_service import ImageService
 from app.tasks.ai_tasks import classify_expense_item_task
 from app.constants import OCR_SCHEMA_VERSION
 from app.services.category_rule_service import CategoryRuleService
+from sqlalchemy.exc import OperationalError, DBAPIError
 import logging
 import json
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="process_receipt_ocr")
+@celery_app.task(
+    name="process_receipt_ocr",
+    autoretry_for=(OperationalError, DBAPIError),
+    retry_kwargs={'max_retries': 3, 'countdown': 5},
+    retry_backoff=True
+)
 def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
     """
-    レシートのOCR処理タスク（Codex exec使用）
+    レシートのOCR処理タスク（codex exec使用）
     ExpenseItem複数作成に対応
 
     Args:
@@ -71,7 +78,7 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
 
         logger.info(f"OCR処理開始: expense_id={expense_id}, model={ai_settings.ocr_model}")
 
-        # Codex execでOCR実行
+        # codex execでOCR実行
         ocr_result = CodexService.process_receipt_ocr(
             image_path=image_path,
             categories=category_names,
@@ -105,7 +112,6 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
         # 日付
         if data.get("date"):
             try:
-                from datetime import datetime as dt
                 date_str = data["date"]
                 for fmt in ["%Y/%m/%d", "%Y-%m-%d", "%Y年%m月%d日"]:
                     try:
@@ -262,9 +268,14 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
 
     except Exception as e:
         logger.exception(f"OCR処理中にエラーが発生: {str(e)}")
-        if expense:
-            expense.status = ExpenseStatus.FAILED
-            db.commit()
+        db.rollback()  # 明示的にロールバック
+        try:
+            if expense:
+                expense.status = ExpenseStatus.FAILED
+                db.commit()
+        except Exception as commit_error:
+            logger.error(f"エラー状態の保存に失敗: {str(commit_error)}")
+            db.rollback()
         return {"success": False, "error": str(e)}
     finally:
         db.close()
