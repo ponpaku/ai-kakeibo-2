@@ -33,7 +33,7 @@ export default function InputPage() {
     occurred_at: new Date().toISOString().split('T')[0],
     payment_method: '',  // 支払い方法（任意）
   });
-  const [showCalculator, setShowCalculator] = useState(false);
+  const [manualStep, setManualStep] = useState<'amount' | 'details'>('amount');
 
   useEffect(() => {
     loadCategories();
@@ -263,159 +263,163 @@ export default function InputPage() {
     );
   }
 
-  return (
-    <Layout>
-      <div className="max-w-4xl mx-auto">
-        <button
-          onClick={() => setMode('choice')}
-          className="mb-6 text-primary-600 hover:text-primary-700"
-        >
-          ← 戻る
-        </button>
+  // ステップ1: 金額入力画面
+  if (manualStep === 'amount') {
+    return (
+      <Layout>
+        <div className="max-w-md mx-auto">
+          <button
+            onClick={() => setMode('choice')}
+            className="mb-6 text-primary-600 hover:text-primary-700"
+          >
+            ← 戻る
+          </button>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">手入力</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">手入力</h1>
 
-        <div className="max-w-2xl mx-auto">
-          {/* 入力フォーム */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <form onSubmit={handleManualSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  合計金額 <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    value={manualForm.total_amount || ''}
-                    onChange={(e) => setManualForm({ ...manualForm, total_amount: parseInt(e.target.value) || 0 })}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCalculator(!showCalculator)}
-                    className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
-                  >
-                    電卓
-                  </button>
-                </div>
-              </div>
+          {/* 電卓を直接表示 */}
+          <Calculator
+            onCalculate={(value) => {
+              setManualForm({ ...manualForm, total_amount: Math.floor(value) });
+            }}
+          />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  商品名（任意）
-                </label>
-                <input
-                  type="text"
-                  value={manualForm.product_name}
-                  onChange={(e) => setManualForm({ ...manualForm, product_name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="例: キュキュット、洗剤、食材など"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  空欄の場合は店舗名やメモから自動設定されます
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  店舗名/加盟店名（任意）
-                </label>
-                <input
-                  type="text"
-                  value={manualForm.merchant_name}
-                  onChange={(e) => setManualForm({ ...manualForm, merchant_name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="例: セブン-イレブン"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  日付 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={manualForm.occurred_at}
-                  onChange={(e) => setManualForm({ ...manualForm, occurred_at: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  支払い方法（任意）
-                </label>
-                <select
-                  value={manualForm.payment_method}
-                  onChange={(e) => setManualForm({ ...manualForm, payment_method: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">未選択</option>
-                  <option value="cash">現金</option>
-                  <option value="credit">クレジットカード</option>
-                  <option value="debit">デビットカード</option>
-                  <option value="e-money">電子マネー</option>
-                  <option value="qr">QRコード決済</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  備考（任意）
-                </label>
-                <textarea
-                  value={manualForm.note}
-                  onChange={(e) => setManualForm({ ...manualForm, note: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="例: セール品、まとめ買いなど"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  カテゴリ（任意）
-                </label>
-                <select
-                  value={manualForm.category_id || ''}
-                  onChange={(e) => setManualForm({ ...manualForm, category_id: e.target.value ? parseInt(e.target.value) : undefined })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">AIに分類させる</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
-              >
-                記録する
-              </button>
-            </form>
+          {/* 入力金額表示と次へボタン */}
+          <div className="mt-6 bg-white p-4 rounded-lg shadow-md">
+            <div className="text-center mb-4">
+              <span className="text-gray-600">入力金額：</span>
+              <span className="text-2xl font-bold text-gray-900">
+                ¥{manualForm.total_amount.toLocaleString()}
+              </span>
+            </div>
+            <button
+              onClick={() => setManualStep('details')}
+              disabled={manualForm.total_amount <= 0}
+              className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              次へ →
+            </button>
           </div>
         </div>
+      </Layout>
+    );
+  }
 
-        {/* 電卓モーダル */}
-        {showCalculator && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowCalculator(false)}
-          >
-            <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md">
-              <Calculator
-                onCalculate={(value) => {
-                  setManualForm({ ...manualForm, total_amount: Math.floor(value) });
-                  setShowCalculator(false);
-                }}
+  // ステップ2: 詳細入力画面
+  return (
+    <Layout>
+      <div className="max-w-2xl mx-auto">
+        <button
+          onClick={() => setManualStep('amount')}
+          className="mb-6 text-primary-600 hover:text-primary-700"
+        >
+          ← 金額入力に戻る
+        </button>
+
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">詳細入力</h1>
+        <p className="text-lg text-gray-600 mb-6">
+          金額: <span className="font-bold text-gray-900">¥{manualForm.total_amount.toLocaleString()}</span>
+        </p>
+
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <form onSubmit={handleManualSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                商品名（任意）
+              </label>
+              <input
+                type="text"
+                value={manualForm.product_name}
+                onChange={(e) => setManualForm({ ...manualForm, product_name: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900"
+                placeholder="例: キュキュット、洗剤、食材など"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                空欄の場合は店舗名やメモから自動設定されます
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                店舗名/加盟店名（任意）
+              </label>
+              <input
+                type="text"
+                value={manualForm.merchant_name}
+                onChange={(e) => setManualForm({ ...manualForm, merchant_name: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900"
+                placeholder="例: セブン-イレブン"
               />
             </div>
-          </div>
-        )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                日付 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={manualForm.occurred_at}
+                onChange={(e) => setManualForm({ ...manualForm, occurred_at: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                支払い方法（任意）
+              </label>
+              <select
+                value={manualForm.payment_method}
+                onChange={(e) => setManualForm({ ...manualForm, payment_method: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900"
+              >
+                <option value="">未選択</option>
+                <option value="cash">現金</option>
+                <option value="credit">クレジットカード</option>
+                <option value="debit">デビットカード</option>
+                <option value="e-money">電子マネー</option>
+                <option value="qr">QRコード決済</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                備考（任意）
+              </label>
+              <textarea
+                value={manualForm.note}
+                onChange={(e) => setManualForm({ ...manualForm, note: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900"
+                rows={3}
+                placeholder="例: セール品、まとめ買いなど"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                カテゴリ（任意）
+              </label>
+              <select
+                value={manualForm.category_id || ''}
+                onChange={(e) => setManualForm({ ...manualForm, category_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-gray-900"
+              >
+                <option value="">AIに分類させる</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+            >
+              記録する
+            </button>
+          </form>
+        </div>
       </div>
     </Layout>
   );
