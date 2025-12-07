@@ -132,7 +132,7 @@ def get_recent_expenses(
     expenses = db.query(Expense).filter(
         Expense.user_id == current_user.id
     ).options(joinedload(Expense.items), joinedload(Expense.receipt))\
-     .order_by(Expense.occurred_at.desc())\
+     .order_by(Expense.occurred_at.desc(), Expense.created_at.desc())\
      .limit(limit)\
      .all()
 

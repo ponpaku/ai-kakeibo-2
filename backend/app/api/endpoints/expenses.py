@@ -52,7 +52,7 @@ def list_expenses(
 
     total = query.count()
     expenses = query.options(joinedload(Expense.items), joinedload(Expense.receipt))\
-                    .order_by(Expense.occurred_at.desc())\
+                    .order_by(Expense.occurred_at.desc(), Expense.created_at.desc())\
                     .offset(skip)\
                     .limit(limit)\
                     .all()
