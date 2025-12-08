@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.config import settings
@@ -6,6 +6,12 @@ from app.database import engine, Base, SessionLocal
 from app.api.endpoints import auth, users, categories, expenses, receipts, dashboard, ai_settings
 from app.api.endpoints import category_rules
 import os
+import logging
+import time
+
+# ロギング設定
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # モデルをインポート（テーブル作成のため）
 from app.models import user, category, expense, expense_item, receipt, ai_settings as ai_settings_model, category_rule
@@ -13,14 +19,31 @@ from app.models.user import User
 from app.models.category import Category
 from app.utils.security import get_password_hash
 
+logger.info("🚀 Starting AI Kakeibo API...")
+
 # テーブル作成
 Base.metadata.create_all(bind=engine)
+logger.info("✅ Database tables created/verified")
 
 app = FastAPI(
     title="AI家計簿 API",
     description="AIを利用した家計簿アプリケーション",
     version="1.0.0"
 )
+
+# リクエストログミドルウェア
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    logger.info(f"📥 {request.method} {request.url.path}")
+    try:
+        response = await call_next(request)
+        process_time = time.time() - start_time
+        logger.info(f"📤 {request.method} {request.url.path} - {response.status_code} ({process_time:.3f}s)")
+        return response
+    except Exception as e:
+        logger.error(f"❌ Error processing {request.method} {request.url.path}: {str(e)}")
+        raise
 
 # CORS設定
 app.add_middleware(
