@@ -62,6 +62,21 @@ export default function DashboardPage() {
     }
   }, [selectedMonth, getMonthRange]);
 
+  // ポーリング用: ローディング状態を更新せずにサイレントにデータを更新
+  const refreshDataSilently = useCallback(async () => {
+    try {
+      const { startDate, endDate } = getMonthRange(selectedMonth);
+      const [summaryData, expensesData] = await Promise.all([
+        dashboardAPI.getSummary(startDate, endDate),
+        dashboardAPI.getRecentExpenses(10),
+      ]);
+      setSummary(summaryData);
+      setRecentExpenses(expensesData);
+    } catch (error) {
+      console.error('サイレントリフレッシュに失敗しました:', error);
+    }
+  }, [selectedMonth, getMonthRange]);
+
   useEffect(() => {
     loadData();
     loadCategories();
@@ -72,16 +87,16 @@ export default function DashboardPage() {
     expense => expense.status === 'processing' || expense.status === 'pending'
   );
 
-  // 処理中のexpenseがある場合、ポーリングでデータを再取得
+  // 処理中のexpenseがある場合、ポーリングでデータを再取得（サイレント更新）
   useEffect(() => {
     if (!hasProcessingExpenses) return;
 
     const pollInterval = setInterval(() => {
-      loadData();
+      refreshDataSilently();
     }, 3000); // 3秒間隔
 
     return () => clearInterval(pollInterval);
-  }, [hasProcessingExpenses, loadData]);
+  }, [hasProcessingExpenses, refreshDataSilently]);
 
   // 月を切り替える関数
   const handlePreviousMonth = () => {
