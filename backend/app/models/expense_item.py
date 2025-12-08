@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, DateTime, ForeignKey, Text, Enum, Index
+from sqlalchemy import Column, Integer, String, Numeric, DateTime, ForeignKey, Text, Enum, Index, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -30,15 +30,20 @@ class ExpenseItem(Base):
     product_name = Column(String(200), nullable=False)     # 商品名（必須）
     quantity = Column(Numeric(10, 3), nullable=True)       # 数量
     unit_price = Column(Integer, nullable=True)            # 単価（円）
-    line_total = Column(Integer, nullable=False)           # 行合計（円）
+    line_total = Column(Integer, nullable=False)           # 行合計（円・税込み）
+
+    # 税金情報
+    tax_rate = Column(Numeric(4, 2), nullable=True)    # 税率（%）例: 10.00, 8.00
+    tax_included = Column(Boolean, nullable=True)      # 元の価格が税込みか
+    tax_amount = Column(Integer, nullable=True)        # 税額（円）
 
     # カテゴリ（集計の主語）
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True, index=True)
     category_source = Column(Enum(CategorySource), nullable=True)  # カテゴリ決定方法
     ai_confidence = Column(Numeric(3, 2), nullable=True)           # AI信頼度（0.00-1.00）
 
-    # 拡張用（税区分、割引等）
-    raw = Column(Text, nullable=True)  # JSON形式で将来的な拡張データを格納
+    # 拡張用
+    raw = Column(Text, nullable=True)  # JSON形式で拡張データを格納
 
     # タイムスタンプ
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -78,12 +78,14 @@ class CodexService:
                     "items": {
                         "type": "object",
                         "additionalProperties": False,
-                        "required": ["name", "quantity", "unit_price", "line_total", "category"],
+                        "required": ["name", "quantity", "unit_price", "line_total", "tax_rate", "tax_included", "category"],
                         "properties": {
                             "name": {"type": ["string", "null"]},
                             "quantity": {"type": ["number", "null"]},
                             "unit_price": {"type": ["number", "null"]},
                             "line_total": {"type": ["number", "null"]},
+                            "tax_rate": {"type": ["number", "null"]},
+                            "tax_included": {"type": ["boolean", "null"]},
                             "category": {
                                 "type": "string",
                                 "enum": categories
@@ -184,6 +186,9 @@ class CodexService:
             base_prompt = system_prompt or (
                 "あなたは家計簿のレシート読取器です。外部コマンド実行やファイル操作、推測による補完は禁止です。"
                 "画像に写っている情報のみを正確に抽出し、カテゴリは必ず候補から1つ選び、迷う場合は『その他』を選択してください。"
+                "各商品の税率(tax_rate)は8または10で記録してください（軽減税率8%、標準税率10%）。"
+                "価格が税込み表示か税抜き表示かをtax_includedで記録してください（true:税込み、false:税抜き）。"
+                "line_totalには画像に表示されている価格をそのまま記録してください。"
                 "出力はスキーマに準拠したminified JSONのみ。"
             )
             prompt = (

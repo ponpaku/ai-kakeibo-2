@@ -10,6 +10,9 @@ class ExpenseItemBase(BaseModel):
     quantity: Optional[Decimal] = None
     unit_price: Optional[int] = None
     line_total: int
+    tax_rate: Optional[Decimal] = None  # 税率（%）
+    tax_included: Optional[bool] = None  # 税込みか
+    tax_amount: Optional[int] = None  # 税額（円）
     category_id: Optional[int] = None
 
 
@@ -38,6 +41,9 @@ class ExpenseItemUpdate(BaseModel):
     quantity: Optional[Decimal] = None
     unit_price: Optional[int] = None
     line_total: Optional[int] = None
+    tax_rate: Optional[Decimal] = None
+    tax_included: Optional[bool] = None
+    tax_amount: Optional[int] = None
     category_id: Optional[int] = None
 
 

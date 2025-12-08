@@ -28,6 +28,9 @@ export interface ExpenseItem {
   quantity?: number;
   unit_price?: number;
   line_total: number;
+  tax_rate?: number;
+  tax_included?: boolean;
+  tax_amount?: number;
   category_id?: number;
   category_source?: 'ocr' | 'ai' | 'manual' | 'rule';
   ai_confidence?: number;

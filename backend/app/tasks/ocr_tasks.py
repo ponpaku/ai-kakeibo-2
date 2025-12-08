@@ -159,6 +159,22 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
                 unit_price = item_data.get("unit_price")
                 line_total = item_data.get("line_total") or 0
 
+                # 税金情報を取得
+                tax_rate = item_data.get("tax_rate")  # 例: 10, 8
+                tax_included = item_data.get("tax_included")  # True: 税込み, False: 税抜き
+
+                # 税額を計算
+                tax_amount = None
+                if tax_rate is not None and line_total:
+                    if tax_included:
+                        # 税込みの場合: 税額 = line_total - (line_total / (1 + tax_rate/100))
+                        tax_amount = int(line_total - (line_total / (1 + tax_rate / 100)))
+                    else:
+                        # 税抜きの場合: 税額 = line_total * (tax_rate / 100)
+                        tax_amount = int(line_total * (tax_rate / 100))
+                        # line_totalを税込みに変換
+                        line_total = line_total + tax_amount
+
                 # カテゴリ名からIDを取得
                 category_name = item_data.get("category")
                 category_id = None
@@ -190,6 +206,9 @@ def process_receipt_ocr(expense_id: int, skip_ai: bool = False):
                     quantity=quantity,
                     unit_price=unit_price,
                     line_total=line_total,
+                    tax_rate=tax_rate,
+                    tax_included=tax_included,
+                    tax_amount=tax_amount,
                     category_id=category_id,
                     category_source=category_source,
                     ai_confidence=ai_confidence,
