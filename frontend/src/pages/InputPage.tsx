@@ -4,7 +4,7 @@ import Layout from '@/components/common/Layout';
 import Calculator from '@/components/Input/Calculator';
 import { receiptAPI, expenseAPI, categoryAPI } from '@/services/api';
 import type { Category } from '@/types';
-import { Camera, FileText, Upload } from 'lucide-react';
+import { Camera, FileText, ImageIcon } from 'lucide-react';
 import { useGlobalModal } from '@/contexts/ModalContext';
 
 export default function InputPage() {
@@ -22,6 +22,7 @@ export default function InputPage() {
     stage: 'uploading' | 'ocr' | 'ai' | 'complete';
     canLeave: boolean;
   }>({ show: false, stage: 'uploading', canLeave: false });
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 手入力用
@@ -184,13 +185,40 @@ export default function InputPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-md">
             {!previewUrl ? (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-primary-500 transition-colors"
-              >
-                <Upload className="mx-auto mb-4 text-gray-400" size={48} />
-                <p className="text-gray-600 mb-2">クリックしてレシート画像を選択</p>
-                <p className="text-sm text-gray-500">JPG, PNG, WEBP</p>
+              <div className="space-y-4">
+                <p className="text-gray-600 text-center mb-4">レシート画像を取得する方法を選択してください</p>
+
+                {/* カメラで撮影ボタン */}
+                <button
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-3 p-6 border-2 border-dashed border-primary-300 rounded-lg bg-primary-50 hover:border-primary-500 hover:bg-primary-100 transition-colors"
+                >
+                  <Camera className="text-primary-600" size={32} />
+                  <div className="text-left">
+                    <p className="font-semibold text-primary-700">カメラで撮影</p>
+                    <p className="text-sm text-primary-600">スマホのカメラで撮影</p>
+                  </div>
+                </button>
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
+                {/* ファイルから選択ボタン */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-3 p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors"
+                >
+                  <ImageIcon className="text-gray-500" size={32} />
+                  <div className="text-left">
+                    <p className="font-semibold text-gray-700">ファイルから選択</p>
+                    <p className="text-sm text-gray-500">保存済みの画像を選択</p>
+                  </div>
+                </button>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -198,6 +226,8 @@ export default function InputPage() {
                   onChange={handleFileSelect}
                   className="hidden"
                 />
+
+                <p className="text-sm text-gray-500 text-center">対応形式: JPG, PNG, WEBP</p>
               </div>
             ) : (
               <div>
