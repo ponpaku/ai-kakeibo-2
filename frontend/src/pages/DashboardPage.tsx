@@ -200,7 +200,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleItemFormChange = (itemId: number, field: keyof EditItemForm, value: string | number | null) => {
+  const handleItemFormChange = (itemId: number, field: keyof EditItemForm, value: string | number | boolean | null) => {
     setEditItemsForm(prev => prev.map(item =>
       item.id === itemId ? { ...item, [field]: value } : item
     ));
