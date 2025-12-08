@@ -9,6 +9,8 @@ import { useGlobalModal } from '@/contexts/ModalContext';
 interface EditItemForm {
   id: number;
   product_name: string;
+  quantity: number | null;
+  unit_price: number | null;
   line_total: number;
   tax_rate: number | null;
   tax_included: boolean | null;
@@ -70,6 +72,8 @@ export default function ExpenseEditPage() {
         setEditItemsForm(expenseData.items.map(item => ({
           id: item.id,
           product_name: item.product_name,
+          quantity: item.quantity ?? null,
+          unit_price: item.unit_price ?? null,
           line_total: item.line_total,
           tax_rate: item.tax_rate ?? null,
           tax_included: item.tax_included ?? null,
@@ -286,7 +290,7 @@ export default function ExpenseEditPage() {
                       <div key={item.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
                         <div className="text-xs text-gray-500 font-medium">商品 {index + 1}</div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">
                               商品名
@@ -301,7 +305,20 @@ export default function ExpenseEditPage() {
 
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">
-                              金額
+                              数量
+                            </label>
+                            <input
+                              type="number"
+                              step="0.001"
+                              value={item.quantity ?? ''}
+                              onChange={(e) => handleItemFormChange(item.id, 'quantity', e.target.value ? parseFloat(e.target.value) : null)}
+                              className="w-full px-3 py-1.5 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              金額 <span className={`text-xs ${item.tax_included ? 'text-green-600' : 'text-orange-600'}`}>({item.tax_included ? '税込' : '税抜'})</span>
                             </label>
                             <input
                               type="number"
