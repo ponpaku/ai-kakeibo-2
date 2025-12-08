@@ -10,6 +10,9 @@ interface EditItemForm {
   id: number;
   product_name: string;
   line_total: number;
+  tax_rate: number | null;
+  tax_included: boolean | null;
+  tax_amount: number | null;
   category_id: number | null;
 }
 
@@ -68,6 +71,9 @@ export default function ExpenseEditPage() {
           id: item.id,
           product_name: item.product_name,
           line_total: item.line_total,
+          tax_rate: item.tax_rate ?? null,
+          tax_included: item.tax_included ?? null,
+          tax_amount: item.tax_amount ?? null,
           category_id: item.category_id ?? null,
         })));
       } else {
@@ -123,6 +129,9 @@ export default function ExpenseEditPage() {
             await expenseAPI.updateExpenseItem(Number(id), itemForm.id, {
               product_name: itemForm.product_name,
               line_total: itemForm.line_total,
+              tax_rate: itemForm.tax_rate,
+              tax_included: itemForm.tax_included,
+              tax_amount: itemForm.tax_amount,
               category_id: itemForm.category_id,
             });
           }
@@ -317,6 +326,35 @@ export default function ExpenseEditPage() {
                               <option key={cat.id} value={cat.id}>{cat.name}</option>
                             ))}
                           </select>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              税率
+                            </label>
+                            <select
+                              value={item.tax_rate ?? ''}
+                              onChange={(e) => handleItemFormChange(item.id, 'tax_rate', e.target.value ? parseFloat(e.target.value) : null)}
+                              className="w-full px-3 py-1.5 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                            >
+                              <option value="">未設定</option>
+                              <option value="8">8%（軽減税率）</option>
+                              <option value="10">10%（標準税率）</option>
+                            </select>
+                          </div>
+
+                          <div className="flex items-center">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={item.tax_included ?? true}
+                                onChange={(e) => handleItemFormChange(item.id, 'tax_included', e.target.checked)}
+                                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                              />
+                              <span className="text-xs text-gray-600">税込み価格</span>
+                            </label>
+                          </div>
                         </div>
                       </div>
                     ))}
