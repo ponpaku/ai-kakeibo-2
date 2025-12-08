@@ -6,6 +6,7 @@ import ExpenseList from '@/components/Dashboard/ExpenseList';
 import { dashboardAPI, expenseAPI, receiptAPI, categoryAPI } from '@/services/api';
 import type { DashboardSummary, Expense, Category } from '@/types';
 import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useGlobalModal } from '@/contexts/ModalContext';
 
 interface EditItemForm {
   id: number;
@@ -15,6 +16,7 @@ interface EditItemForm {
 }
 
 export default function DashboardPage() {
+  const { showError } = useGlobalModal();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [recentExpenses, setRecentExpenses] = useState<Expense[]>([]);
@@ -166,7 +168,7 @@ export default function DashboardPage() {
       loadData();
     } catch (error) {
       console.error('更新に失敗しました:', error);
-      alert('更新に失敗しました');
+      showError('更新に失敗しました');
     }
   };
 

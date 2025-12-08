@@ -3,8 +3,10 @@ import Layout from '@/components/common/Layout';
 import { userAPI, categoryAPI, aiSettingsAPI, categoryRuleAPI } from '@/services/api';
 import type { User, Category, AISettings, CategoryRule } from '@/types';
 import { Plus, Edit, Trash2, Settings } from 'lucide-react';
+import { useGlobalModal } from '@/contexts/ModalContext';
 
 export default function AdminPage() {
+  const { showError, showSuccess, showWarning, showConfirm } = useGlobalModal();
   const [tab, setTab] = useState<'categories' | 'users' | 'ai-settings' | 'category-rules'>('categories');
   const getInitialRuleForm = (defaultCategoryId?: number): Partial<CategoryRule> => ({
     name: '',
@@ -60,25 +62,25 @@ export default function AdminPage() {
   };
 
   const handleDeleteCategory = async (categoryId: number) => {
-    if (!window.confirm('このカテゴリを削除しますか？')) return;
-
-    try {
-      await categoryAPI.deleteCategory(categoryId);
-      loadData();
-    } catch (error: any) {
-      alert(error.response?.data?.detail || '削除に失敗しました');
-    }
+    showConfirm('このカテゴリを削除しますか？', async () => {
+      try {
+        await categoryAPI.deleteCategory(categoryId);
+        loadData();
+      } catch (error: any) {
+        showError(error.response?.data?.detail || '削除に失敗しました');
+      }
+    });
   };
 
   const handleDeleteUser = async (userId: number) => {
-    if (!window.confirm('このユーザーを削除しますか？')) return;
-
-    try {
-      await userAPI.deleteUser(userId);
-      loadData();
-    } catch (error: any) {
-      alert(error.response?.data?.detail || '削除に失敗しました');
-    }
+    showConfirm('このユーザーを削除しますか？', async () => {
+      try {
+        await userAPI.deleteUser(userId);
+        loadData();
+      } catch (error: any) {
+        showError(error.response?.data?.detail || '削除に失敗しました');
+      }
+    });
   };
 
   const handleEditRule = (rule: CategoryRule) => {
@@ -87,21 +89,22 @@ export default function AdminPage() {
   };
 
   const handleDeleteRule = async (ruleId: number) => {
-    if (!window.confirm('このルールを削除しますか？')) return;
-    try {
-      await categoryRuleAPI.deleteRule(ruleId);
-      setEditingRule(null);
-      setRuleForm(getInitialRuleForm(categories[0]?.id));
-      loadData();
-    } catch (error: any) {
-      alert(error.response?.data?.detail || '削除に失敗しました');
-    }
+    showConfirm('このルールを削除しますか？', async () => {
+      try {
+        await categoryRuleAPI.deleteRule(ruleId);
+        setEditingRule(null);
+        setRuleForm(getInitialRuleForm(categories[0]?.id));
+        loadData();
+      } catch (error: any) {
+        showError(error.response?.data?.detail || '削除に失敗しました');
+      }
+    });
   };
 
   const handleSubmitRule = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!ruleForm.category_id) {
-      alert('カテゴリを選択してください');
+      showWarning('カテゴリを選択してください');
       return;
     }
 
@@ -117,9 +120,9 @@ export default function AdminPage() {
       setRuleForm(getInitialRuleForm(categories[0]?.id));
       setEditingRule(null);
       await loadData();
-      alert('ルールを保存しました');
+      showSuccess('ルールを保存しました');
     } catch (error: any) {
-      alert(error.response?.data?.detail || '保存に失敗しました');
+      showError(error.response?.data?.detail || '保存に失敗しました');
     } finally {
       setRuleSaving(false);
     }
@@ -158,9 +161,9 @@ export default function AdminPage() {
         classification_system_prompt: aiSettings.classification_system_prompt,
       });
       setAiSettings(updated);
-      alert('AI設定を保存しました');
+      showSuccess('AI設定を保存しました');
     } catch (error: any) {
-      alert(error.response?.data?.detail || '保存に失敗しました');
+      showError(error.response?.data?.detail || '保存に失敗しました');
     } finally {
       setSaving(false);
     }
@@ -175,42 +178,38 @@ export default function AdminPage() {
         <div className="flex gap-4 mb-6 border-b border-gray-200">
           <button
             onClick={() => setTab('categories')}
-            className={`px-4 py-2 font-medium transition-colors ${
-              tab === 'categories'
+            className={`px-4 py-2 font-medium transition-colors ${tab === 'categories'
                 ? 'text-primary-600 border-b-2 border-primary-600'
                 : 'text-gray-600 hover:text-gray-900'
-            }`}
+              }`}
           >
             カテゴリ管理
           </button>
           <button
             onClick={() => setTab('users')}
-            className={`px-4 py-2 font-medium transition-colors ${
-              tab === 'users'
+            className={`px-4 py-2 font-medium transition-colors ${tab === 'users'
                 ? 'text-primary-600 border-b-2 border-primary-600'
                 : 'text-gray-600 hover:text-gray-900'
-            }`}
+              }`}
           >
             ユーザー管理
           </button>
           <button
             onClick={() => setTab('ai-settings')}
-            className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors ${
-              tab === 'ai-settings'
+            className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors ${tab === 'ai-settings'
                 ? 'text-primary-600 border-b-2 border-primary-600'
                 : 'text-gray-600 hover:text-gray-900'
-            }`}
+              }`}
           >
             <Settings size={18} />
             AI設定
           </button>
           <button
             onClick={() => setTab('category-rules')}
-            className={`px-4 py-2 font-medium transition-colors ${
-              tab === 'category-rules'
+            className={`px-4 py-2 font-medium transition-colors ${tab === 'category-rules'
                 ? 'text-primary-600 border-b-2 border-primary-600'
                 : 'text-gray-600 hover:text-gray-900'
-            }`}
+              }`}
           >
             分類ルール
           </button>
@@ -260,11 +259,10 @@ export default function AdminPage() {
                         {category.description || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          category.is_active
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${category.is_active
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
-                        }`}>
+                          }`}>
                           {category.is_active ? '有効' : '無効'}
                         </span>
                       </td>
@@ -333,20 +331,18 @@ export default function AdminPage() {
                         {user.email}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          user.is_admin
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.is_admin
                             ? 'bg-purple-100 text-purple-800'
                             : 'bg-gray-100 text-gray-800'
-                        }`}>
+                          }`}>
                           {user.is_admin ? '管理者' : '一般'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          user.is_active
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.is_active
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
-                        }`}>
+                          }`}>
                           {user.is_active ? '有効' : '無効'}
                         </span>
                       </td>
@@ -545,9 +541,8 @@ export default function AdminPage() {
                           <td className="px-4 py-3 text-sm text-gray-900">{rule.priority}</td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span
-                              className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                rule.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                              }`}
+                              className={`px-2 py-1 text-xs font-medium rounded-full ${rule.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                }`}
                             >
                               {rule.is_active ? '有効' : '無効'}
                             </span>

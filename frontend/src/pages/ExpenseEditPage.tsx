@@ -4,6 +4,7 @@ import Layout from '@/components/common/Layout';
 import { expenseAPI, categoryAPI } from '@/services/api';
 import type { Expense, Category } from '@/types';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useGlobalModal } from '@/contexts/ModalContext';
 
 interface EditItemForm {
   id: number;
@@ -15,6 +16,7 @@ interface EditItemForm {
 export default function ExpenseEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { showError, showSuccess, showWarning } = useGlobalModal();
 
   const [expense, setExpense] = useState<Expense | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -73,7 +75,7 @@ export default function ExpenseEditPage() {
       }
     } catch (error) {
       console.error('データの読み込みに失敗しました:', error);
-      alert('データの読み込みに失敗しました');
+      showError('データの読み込みに失敗しました');
       navigate('/');
     } finally {
       setLoading(false);
@@ -90,7 +92,7 @@ export default function ExpenseEditPage() {
     e.preventDefault();
 
     if (!formData.title.trim()) {
-      alert('タイトルを入力してください');
+      showWarning('タイトルを入力してください');
       return;
     }
 
@@ -127,11 +129,11 @@ export default function ExpenseEditPage() {
         }
       }
 
-      alert('出費を更新しました');
+      showSuccess('出費を更新しました');
       navigate('/');
     } catch (error) {
       console.error('更新に失敗しました:', error);
-      alert('更新に失敗しました');
+      showError('更新に失敗しました');
     } finally {
       setSaving(false);
     }

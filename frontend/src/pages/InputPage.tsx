@@ -1,14 +1,15 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/common/Layout';
 import Calculator from '@/components/Input/Calculator';
 import { receiptAPI, expenseAPI, categoryAPI } from '@/services/api';
 import type { Category } from '@/types';
 import { Camera, FileText, Upload } from 'lucide-react';
-import { useEffect } from 'react';
+import { useGlobalModal } from '@/contexts/ModalContext';
 
 export default function InputPage() {
   const navigate = useNavigate();
+  const { showInfo, showError, showSuccess } = useGlobalModal();
   const [mode, setMode] = useState<'choice' | 'receipt' | 'manual'>('choice');
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -66,7 +67,7 @@ export default function InputPage() {
 
       if (autoProcess) {
         // 「あとは任せる」の場合：処理を受け付けたことを表示してダッシュボードに戻る
-        alert('レシートを受け付けました。OCRとAI分類を自動で実行します。');
+        showInfo('レシートを受け付けました。OCRとAI分類を自動で実行します。');
         navigate('/');
       } else {
         // 「OCR実行」の場合：OCR処理を開始し、結果を待つ
@@ -97,25 +98,25 @@ export default function InputPage() {
               // OCR失敗
               clearInterval(pollInterval);
               setProcessingStatus({ show: false, stage: 'uploading', canLeave: false });
-              alert('OCR処理に失敗しました');
+              showError('OCR処理に失敗しました');
             } else if (attempts >= maxAttempts) {
               // タイムアウト
               clearInterval(pollInterval);
               setProcessingStatus({ show: false, stage: 'uploading', canLeave: false });
-              alert('OCR処理がタイムアウトしました。ダッシュボードで確認してください。');
+              showError('OCR処理がタイムアウトしました。ダッシュボードで確認してください。');
               navigate('/');
             }
           } catch (error) {
             console.error('OCR結果の取得に失敗しました:', error);
             clearInterval(pollInterval);
             setProcessingStatus({ show: false, stage: 'uploading', canLeave: false });
-            alert('OCR結果の取得に失敗しました');
+            showError('OCR結果の取得に失敗しました');
           }
         }, 1000);
       }
     } catch (error) {
       console.error('アップロードに失敗しました:', error);
-      alert('アップロードに失敗しました');
+      showError('アップロードに失敗しました');
       setProcessingStatus({ show: false, stage: 'uploading', canLeave: false });
     } finally {
       setUploading(false);
@@ -129,11 +130,11 @@ export default function InputPage() {
         ...manualForm,
         occurred_at: new Date(manualForm.occurred_at).toISOString(),
       });
-      alert('出費を記録しました');
+      showSuccess('出費を記録しました');
       navigate('/');
     } catch (error) {
       console.error('記録に失敗しました:', error);
-      alert('記録に失敗しました');
+      showError('記録に失敗しました');
     }
   };
 

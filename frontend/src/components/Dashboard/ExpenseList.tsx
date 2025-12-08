@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 import { Edit, Trash2, Image as ImageIcon } from 'lucide-react';
 import type { Expense } from '@/types';
+import { useGlobalModal } from '@/contexts/ModalContext';
 
 interface ExpenseListProps {
   expenses: Expense[];
@@ -10,6 +11,7 @@ interface ExpenseListProps {
 }
 
 export default function ExpenseList({ expenses, onEdit, onDelete, onViewReceipt }: ExpenseListProps) {
+  const { showConfirm } = useGlobalModal();
   const getStatusBadge = (status: string) => {
     const statusStyles = {
       pending: 'bg-yellow-100 text-yellow-800',
@@ -63,9 +65,9 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onViewReceipt 
               // 全アイテムのカテゴリを重複なしで取得
               const categoryNames = expense.items && expense.items.length > 0
                 ? [...new Set(expense.items
-                    .map(item => item.category_name)
-                    .filter((name): name is string => name !== null && name !== undefined)
-                  )]
+                  .map(item => item.category_name)
+                  .filter((name): name is string => name !== null && name !== undefined)
+                )]
                 : [];
 
               return (
@@ -108,9 +110,9 @@ export default function ExpenseList({ expenses, onEdit, onDelete, onViewReceipt 
                       </button>
                       <button
                         onClick={() => {
-                          if (window.confirm('この出費を削除しますか？')) {
+                          showConfirm('この出費を削除しますか？', () => {
                             onDelete(expense.id);
-                          }
+                          });
                         }}
                         className="text-red-600 hover:text-red-900"
                         title="削除"

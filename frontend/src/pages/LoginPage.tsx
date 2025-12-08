@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { authAPI } from '@/services/api';
+import { useGlobalModal } from '@/contexts/ModalContext';
 
 export default function LoginPage() {
+  const { showError } = useGlobalModal();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -33,7 +35,7 @@ export default function LoginPage() {
 
       if (!response.access_token) {
         console.error('❌ CRITICAL ERROR: access_token is MISSING from response!');
-        alert('エラー: サーバーからトークンが返されませんでした');
+        showError('エラー: サーバーからトークンが返されませんでした');
         setError('ログインレスポンスにトークンがありません');
         setLoading(false);
         return;
@@ -56,7 +58,7 @@ export default function LoginPage() {
 
       if (!savedToken) {
         console.error('❌ CRITICAL ERROR: Failed to save token to localStorage!');
-        alert('エラー: localStorageへの保存に失敗しました');
+        showError('エラー: localStorageへの保存に失敗しました');
         setError('トークンの保存に失敗しました');
         setLoading(false);
         return;
@@ -77,7 +79,7 @@ export default function LoginPage() {
       console.error('   Response data:', err.response?.data);
       console.error('   Status:', err.response?.status);
 
-      alert(`ログインエラー: ${err.response?.data?.detail || err.message}`);
+      showError(`ログインエラー: ${err.response?.data?.detail || err.message}`);
       setError(err.response?.data?.detail || 'ログインに失敗しました');
       setLoading(false);
     }
