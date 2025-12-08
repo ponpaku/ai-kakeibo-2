@@ -80,8 +80,13 @@ def check_environment():
 def init_database():
     """データベースの初期化"""
     from app.database import SessionLocal, engine, Base
+    # 全モデルをインポート（テーブル作成のため必須）
     from app.models.user import User
     from app.models.category import Category
+    from app.models.expense import Expense
+    from app.models.expense_item import ExpenseItem
+    from app.models.receipt import Receipt
+    from app.models import ai_settings, category_rule
     from app.utils.security import get_password_hash
 
     print("データベースの初期化を開始します...")
